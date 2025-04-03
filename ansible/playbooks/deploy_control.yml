@@ -2,13 +2,45 @@
 - hosts: control
   become: true  # root 권한으로 실행
   tasks:
-    # Java 설치 (Jenkins 실행에 필요)
+    # 1. SSH 키 생성
+    - name: Generate SSH key
+      command: ssh-keygen -t rsa -b 2048 -f /root/.ssh/id_rsa -N ""
+      args:
+        creates: /root/.ssh/id_rsa
+
+    # 2. .ssh/config 파일 생성 및 설정
+    - name: Configure SSH config
+      copy:
+        dest: /root/.ssh/config
+        content: |
+          Host web-server
+            HostName 211.183.3.20
+            User user1
+            IdentityFile ~/.ssh/id_rsa
+            StrictHostKeyChecking no
+
+          Host db-server
+            HostName 211.183.3.30
+            User user1
+            IdentityFile ~/.ssh/id_rsa
+            StrictHostKeyChecking no
+
+          Host storage-server
+            HostName 211.183.3.40
+            User user1
+            IdentityFile ~/.ssh/id_rsa
+            StrictHostKeyChecking no
+        owner: root
+        group: root
+        mode: '0600'
+
+    # 3. Java 설치 (Jenkins 실행에 필요)
     - name: Install Java
       apt:
         name: openjdk-11-jdk
         state: present
 
-    # 필수 도구 설치 (Git, curl)
+    # 4. 필수 도구 설치 (Git, curl)
     - name: Install required tools (Git, curl)
       apt:
         name:
@@ -16,39 +48,39 @@
           - curl
         state: present 
 
-    # Jenkins 저장소 키 추가
+    # 5. Jenkins 저장소 키 추가
     - name: Add Jenkins repository key
       apt_key:
         url: https://pkg.jenkins.io/debian/jenkins.io.key
         state: present
 
-    # Jenkins 저장소 추가
+    # 6. Jenkins 저장소 추가
     - name: Add Jenkins repository
       apt_repository:
         repo: deb http://pkg.jenkins.io/debian-stable binary/
         state: present
 
-    # Jenkins 설치
+    # 7. Jenkins 설치
     - name: Install Jenkins
       apt:
         name: jenkins
         state: present
         update_cache: yes
 
-    # Ansible 설치
+    # 8. Ansible 설치
     - name: Install Ansible
       apt:
         name: ansible
         state: present
 
-    # Jenkins 서비스 시작 및 활성화
+    # 9. Jenkins 서비스 시작 및 활성화
     - name: Start Jenkins service
       service:
         name: jenkins
         state: started
         enabled: true
 
-    # Jenkins가 포트 8080에서 실행되도록 방화벽 규칙 추가
+    # 10. Jenkins가 포트 8080에서 실행되도록 방화벽 규칙 추가
     - name: Allow Jenkins to run on port 8080
       ufw:
         rule: allow
@@ -56,12 +88,12 @@
         port: 8080
         proto: tcp
   
-    # Jenkins 초기 관리자 비밀번호 확인
+    # 11. Jenkins 초기 관리자 비밀번호 확인
     - name: Display Jenkins initial admin password
       command: cat /var/lib/jenkins/secrets/initialAdminPassword
       register: jenkins_password
 
-    # Jenkins 초기 관리자 비밀번호 출력
+    # 12. Jenkins 초기 관리자 비밀번호 출력
     - name: Print Jenkins admin password
       debug:
         msg: "Jenkins initial admin password: {{ jenkins_password.stdout }}"
