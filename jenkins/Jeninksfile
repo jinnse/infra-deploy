@@ -1,0 +1,30 @@
+pipeline {
+    agent any
+    stages {
+        // 첫 번째 단계: Git에서 코드를 클론합니다.
+        stage('Clone Repository') {
+            steps {
+                // Git 리포지토리에서 'main' 브랜치를 클론
+                git branch: 'main', url: 'https://github.com/Jaeki-Lee/infra-deploy.git'
+            }
+        }
+
+        // 두 번째 단계: Control Server로 코드를 전송합니다.
+        stage('Transfer to Control Server') {
+            steps {
+                // SCP 명령을 사용하여 Jenkins 워크스페이스의 코드를 Control Server로 복사(경로 이야기 필요요)
+                sh 'scp -r ./infra-deploy control-user@211.183.3.10:/path/to/deploy'
+            }
+        }
+
+        // 세 번째 단계: Control Server에서 Ansible Playbook을 실행합니다.
+        stage('Run Ansible Playbook') {
+            steps {
+                // SSH를 통해 Control Server에 접속하여 Ansible Playbook 실행(경로 이야기 필요요)
+                sshagent(['control-server-ssh-key']) {
+                    sh 'ssh control-user@211.183.3.10 "cd /path/to/deploy/ansible && ansible-playbook -i inventory.yml playbooks/setup_control.yml"'
+                }
+            }
+        }
+    }
+}

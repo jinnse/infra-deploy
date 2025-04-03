@@ -1,0 +1,67 @@
+---
+- hosts: control
+  become: true  # root 권한으로 실행
+  tasks:
+    # Java 설치 (Jenkins 실행에 필요)
+    - name: Install Java
+      apt:
+        name: openjdk-11-jdk
+        state: present
+
+    # 필수 도구 설치 (Git, curl)
+    - name: Install required tools (Git, curl)
+      apt:
+        name:
+          - git
+          - curl
+        state: present 
+
+    # Jenkins 저장소 키 추가
+    - name: Add Jenkins repository key
+      apt_key:
+        url: https://pkg.jenkins.io/debian/jenkins.io.key
+        state: present
+
+    # Jenkins 저장소 추가
+    - name: Add Jenkins repository
+      apt_repository:
+        repo: deb http://pkg.jenkins.io/debian-stable binary/
+        state: present
+
+    # Jenkins 설치
+    - name: Install Jenkins
+      apt:
+        name: jenkins
+        state: present
+        update_cache: yes
+
+    # Ansible 설치
+    - name: Install Ansible
+      apt:
+        name: ansible
+        state: present
+
+    # Jenkins 서비스 시작 및 활성화
+    - name: Start Jenkins service
+      service:
+        name: jenkins
+        state: started
+        enabled: true
+
+    # Jenkins가 포트 8080에서 실행되도록 방화벽 규칙 추가
+    - name: Allow Jenkins to run on port 8080
+      ufw:
+        rule: allow
+        name: 'Jenkins'
+        port: 8080
+        proto: tcp
+  
+    # Jenkins 초기 관리자 비밀번호 확인
+    - name: Display Jenkins initial admin password
+      command: cat /var/lib/jenkins/secrets/initialAdminPassword
+      register: jenkins_password
+
+    # Jenkins 초기 관리자 비밀번호 출력
+    - name: Print Jenkins admin password
+      debug:
+        msg: "Jenkins initial admin password: {{ jenkins_password.stdout }}"
