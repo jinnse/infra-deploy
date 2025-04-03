@@ -1,6 +1,12 @@
 pipeline {
     agent any
     stages {
+        // 환경 초기화 또는 클린업 단계
+        stage('Prepare Workspace') {
+            steps {
+                deleteDir()
+            }
+        }
         // 첫 번째 단계: Git에서 코드를 클론합니다.
         stage('Clone Repository') {
             steps {
@@ -13,7 +19,7 @@ pipeline {
         stage('Transfer to Control Server') {
             steps {
                 // SCP 명령을 사용하여 Jenkins 워크스페이스의 코드를 Control Server로 복사(경로 이야기 필요요)
-                sh 'scp -r ./infra-deploy control-user@211.183.3.10:/path/to/deploy'
+                sh 'scp -r ./infra-deploy control-user@211.183.3.10:/home/user1/ansibledev'
             }
         }
 
@@ -24,7 +30,7 @@ pipeline {
             steps {
                 // SSH를 통해 Control Server에 접속하여 Ansible Playbook 실행(경로 이야기 필요요)
                 sshagent(['control-server-ssh-key']) {
-                    sh 'ssh control-user@211.183.3.10 "cd /path/to/deploy/ansible && ansible-playbook -i inventory.yml playbooks/setup_control.yml"'
+                    sh 'ssh control-user@211.183.3.10 "cd /home/user1/ansibledev/ansible && ansible-playbook -i inventory.yml playbooks/setup_control.yml"'
                 }
             }
         }
