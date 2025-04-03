@@ -30,7 +30,13 @@ pipeline {
             steps {
                 // SSH를 통해 Control Server에 접속하여 Ansible Playbook 실행(경로 이야기 필요요)
                 sshagent(['control-server-ssh-key']) {
-                    sh 'ssh user1@211.183.3.10 "cd /home/user1/infra/infra-deploy/ansible && ansible-playbook -i inventory.yml playbooks/deploy_control.yml"'
+                   sh '''
+                    ssh user1@211.183.3.10 '
+                        [ -d /home/user1/infra/infra-deploy/ansible ] &&
+                        cd /home/user1/infra/infra-deploy/ansible &&
+                        ansible-playbook -i inventory.yml playbooks/deploy_control.yml
+                    '
+                    '''
                 }
             }
         }
