@@ -1,65 +1,80 @@
 ---
 - hosts: control
   become: true  # root 권한으로 실행
+  vars:
+    ssh_key_path: "/home/user1/.ssh"
   tasks:
-    # SSH 키 생성
-    - name: Generate SSH key
-      command: ssh-keygen -q -N "" -f /root/.ssh/project.pem
-      args:
-        creates: /root/.ssh/project.pem
+    # .ssh 디렉터리 먼저 만들기
+    - name: Ensure .ssh directory exists with correct permissions
+      file:
+        path: "{{ ssh_key_path }}"
+        state: directory
+        owner: user1
+        group: user1
+        mode: '0700'
 
     # SSH 디렉터리 권한 설정
     - name: Set permissions for .ssh directory
       file:
-        path: /root/.ssh
+        path: /home/user1/.ssh
         state: directory
         mode: '0700'
-        owner: root
-        group: root
+
+    # SSH 키 생성
+    - name: Generate SSH key
+      command: ssh-keygen -q -N "" -f "{{ ssh_key_path }}/project.pem"
+      args:
+        creates: "{{ ssh_key_path }}/project.pem"
 
     # SSH 키 파일 권한 설정
     - name: Set permissions for SSH private key
       file:
-        path: /root/.ssh/project.pem
+        path: "{{ ssh_key_path }}/project.pem"
         state: file
         mode: '0600'
-        owner: root
-        group: root
 
     # SSH 공개 키 파일 권한 설정
     - name: Set permissions for SSH public key
       file:
-        path: /root/.ssh/project.pem.pub
+        path: "{{ ssh_key_path }}/project.pem.pub"
         state: file
         mode: '0644'
-        owner: root
-        group: root
 
     # .ssh/config 파일 생성 및 설정
     - name: Configure SSH config
       copy:
-        dest: /root/.ssh/config
+        dest: /home/user1/.ssh/config
         content: |
           Host web
             HostName 211.183.3.20
             User user1
-            IdentityFile ~/.ssh/project.pem
+            IdentityFile /home/user1/.ssh/project.pem
             StrictHostKeyChecking no
 
           Host db
             HostName 211.183.3.30
             User user1
-            IdentityFile ~/.ssh/project.pem
+            IdentityFile /home/user1/.ssh/project.pem
             StrictHostKeyChecking no
 
           Host storage
             HostName 211.183.3.40
             User user1
-            IdentityFile ~/.ssh/project.pem
+            IdentityFile /home/user1/.ssh/project.pem
             StrictHostKeyChecking no
-        owner: root
-        group: root
+        owner: user1
+        group: user1
         mode: '0600'
+
+    - name: Ensure .ssh directory exists with correct permissions
+      delegate_to: "{{ item }}"
+      ansible.builtin.authorized_key:
+        state: present
+        key: "{{ lookup('file', ssh_key_path + '.pub') }}"
+      loop:
+        - web
+        - db
+        - storage
 
     # Java 설치 (Jenkins 실행에 필요)
     - name: Install Java
@@ -68,11 +83,13 @@
         state: present
 
     # 필수 도구 설치 (Git, curl)
-    - name: Install required tools (Git, curl)
+    - name: Install required tools (Git, curl, vim, wget)
       apt:
         name:
           - git
           - curl
+          - vim
+          - wget
         state: present 
 
     # jenkins 저장소 키 추가
@@ -118,21 +135,21 @@
         enabled: true
 
     # Jenkins가 포트 8080에서 실행되도록 방화벽 규칙 추가
-    - name: Allow Jenkins to run on port 8080
-      ufw:
-        rule: allow
-        name: 'Jenkins'
-        port: 8080
-        proto: tcp
+    # - name: Allow Jenkins to run on port 8080
+    #   ufw:
+    #     rule: allow
+    #     name: 'Jenkins'
+    #     port: 8080
+    #     proto: tcp
   
     # Jenkins 초기 관리자 비밀번호 확인
     - name: Display Jenkins initial admin password
       command: cat /var/lib/jenkins/secrets/initialAdminPassword
       register: jenkins_password
 
-    # Jenkins 초기 관리자 비밀번호 저장장
+    # Jenkins 초기 관리자 비밀번호 저장
     - name: Save Jenkins admin password to file
       copy:
         content: "{{ jenkins_password.stdout }}"
-        dest: /root/jenkins-admin-password.txt
-        mode: '0600'
+        dest: /home/user1/jenkins-admin-password.txt
+      mode: '0600'
