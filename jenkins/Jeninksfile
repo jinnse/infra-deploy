@@ -17,6 +17,8 @@ pipeline {
             }
         }
 
+        // 컨트롤 서버에서 Ansible Playbook을 실행하기 
+
         // 세 번째 단계: Control Server에서 Ansible Playbook을 실행합니다.
         stage('Run Ansible Playbook') {
             steps {
