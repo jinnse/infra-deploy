@@ -2,17 +2,17 @@ all:
   children:
     control:
       hosts:
-        control:
-          ansible_host: 192.168.3.41
-    
+        localhost:
+          ansible_connection: local
+
     web:
       hosts:
-        web:
+        web-node:
           ansible_host: 211.183.3.20
-    
+
     db:
       hosts:
-        db:
+        db-node:
           ansible_host: 211.183.3.30
 
     storage:
