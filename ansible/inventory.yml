@@ -9,13 +9,19 @@ all:
       hosts:
         web-server:
           ansible_host: 211.183.3.20
+          ansible_user: user1
+          ansible_ssh_pass: user1
 
     db:
       hosts:
         db-server:
           ansible_host: 211.183.3.30
+          ansible_user: user1
+          ansible_ssh_pass: user1
 
     storage:
       hosts:
         storage-server:
           ansible_host: 211.183.3.40
+          ansible_user: user1
+          ansible_ssh_pass: user1
