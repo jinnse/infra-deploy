@@ -1,5 +1,5 @@
 ---
-- name: Deploy Monitoring Stack
+- name: Deploy Advanced Monitoring Stack
   hosts: all
   become: true
   vars:
@@ -7,151 +7,257 @@
     node_exporter_version: "1.5.0"
     grafana_version: "9.5.2"
     alertmanager_version: "0.25.0"
+    grafana_admin_password: "test123"
+    monitoring_ports: [9090, 9100, 3000, 9093]
+
+  handlers:
+    - name: restart prometheus
+      systemd:
+        name: prometheus
+        state: restarted
+
+    - name: restart alertmanager
+      systemd:
+        name: alertmanager
+        state: restarted
+
+    - name: restart grafana
+      systemd:
+        name: grafana-server
+        state: restarted
 
   tasks:
-    - name: Create user1 user
+    # 사용자 및 권한 설정
+    - name: Create monitoring user
       user:
         name: user1
         system: yes
         shell: /usr/sbin/nologin
         create_home: no
 
-    - name: Install dependencies
+    # 공통 디렉토리 구조 생성
+    - name: Create standard directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: user1
+        group: user1
+      loop:
+        - /etc/prometheus
+        - /var/lib/prometheus
+        - /etc/alertmanager
+        - /var/lib/alertmanager
+
+    # 의존성 설치
+    - name: Install base dependencies
       apt:
-        name:
-          - tar
-          - net-tools
-        state: present
+        name: ["tar", "net-tools", "software-properties-common"]
         update_cache: yes
+        cache_valid_time: 3600
 
-    - name: Download and install Node Exporter
-      get_url:
-        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
-        dest: "/tmp/node_exporter.tar.gz"
+    # Node Exporter 설치
+    - name: Deploy Node Exporter
+      block:
+        - name: Download Node Exporter
+          get_url:
+            url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+            dest: /tmp/node_exporter.tar.gz
 
-    - name: Extract Node Exporter
-      unarchive:
-        src: "/tmp/node_exporter.tar.gz"
-        dest: "/usr/local/bin/"
-        remote_src: yes
-        extra_opts: ["--strip-components=1"]
+        - name: Extract and install
+          unarchive:
+            src: /tmp/node_exporter.tar.gz
+            dest: /usr/local/bin/
+            remote_src: yes
+            extra_opts: ["--strip-components=1"]
+            owner: user1
+            group: user1
+            mode: '0755'
 
-    - name: Create systemd service for Node Exporter
-      copy:
-        dest: "/etc/systemd/system/node_exporter.service"
-        content: |
-          [Unit]
-          Description=Node Exporter
-          After=network.target
+        - name: Configure systemd service
+          copy:
+            dest: /etc/systemd/system/node_exporter.service
+            content: |
+              [Unit]
+              Description=Node Exporter
+              After=network.target
 
-          [Service]
-          User=user1
-          ExecStart=/usr/local/bin/node_exporter
-          Restart=always
+              [Service]
+              User=user1
+              ExecStart=/usr/local/bin/node_exporter
+              Restart=always
 
-          [Install]
-          WantedBy=multi-user.target
+              [Install]
+              WantedBy=multi-user.target
 
-    - name: Start and enable Node Exporter
-      systemd:
-        name: node_exporter
-        enabled: yes
-        state: started
+        - name: Enable service
+          systemd:
+            name: node_exporter
+            enabled: yes
+            state: started
+      tags: node_exporter
 
-    - name: Download and install Prometheus
-      get_url:
-        url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
-        dest: "/tmp/prometheus.tar.gz"
+    # Prometheus 설치
+    - name: Deploy Prometheus
+      block:
+        - name: Download Prometheus
+          get_url:
+            url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+            dest: /tmp/prometheus.tar.gz
 
-    - name: Extract Prometheus
-      unarchive:
-        src: "/tmp/prometheus.tar.gz"
-        dest: "/usr/local/bin/"
-        remote_src: yes
-        extra_opts: ["--strip-components=1"]
+        - name: Extract and install
+          unarchive:
+            src: /tmp/prometheus.tar.gz
+            dest: /usr/local/bin/
+            remote_src: yes
+            extra_opts: ["--strip-components=1"]
+            owner: user1
+            group: user1
+            mode: '0755'
 
-    - name: Create Prometheus configuration
-      copy:
-        dest: "/usr/local/bin/prometheus.yml"
-        content: |
-          global:
-            scrape_interval: 15s
+        - name: Generate dynamic targets
+          set_fact:
+            prometheus_targets: "{% for host in groups['all'] %}'{{ hostvars[host].ansible_host }}:9100'{% if not loop.last %},{% endif %}{% endfor %}"
 
-          scrape_configs:
-            - job_name: 'node'
-              static_configs:
-                - targets: ['localhost:9100']
+        - name: Configure Prometheus
+          copy:
+            dest: /etc/prometheus/prometheus.yml
+            content: |
+              global:
+                scrape_interval: 15s
 
-    - name: Create systemd service for Prometheus
-      copy:
-        dest: "/etc/systemd/system/prometheus.service"
-        content: |
-          [Unit]
-          Description=Prometheus Server
-          After=network.target
+              scrape_configs:
+                - job_name: 'nodes'
+                  static_configs:
+                    - targets: [{{ prometheus_targets }}]
+            owner: user1
+            group: user1
+            notify: restart prometheus
 
-          [Service]
-          User=user1
-          ExecStart=/usr/local/bin/prometheus --config.file=/usr/local/bin/prometheus.yml
-          Restart=always
+        - name: Configure systemd service
+          copy:
+            dest: /etc/systemd/system/prometheus.service
+            content: |
+              [Unit]
+              Description=Prometheus Server
+              After=network.target
 
-          [Install]
-          WantedBy=multi-user.target
+              [Service]
+              User=user1
+              ExecStart=/usr/local/bin/prometheus \
+                --config.file=/etc/prometheus/prometheus.yml \
+                --storage.tsdb.path=/var/lib/prometheus
+              Restart=always
 
-    - name: Start and enable Prometheus
-      systemd:
-        name: prometheus
-        enabled: yes
-        state: started
+              [Install]
+              WantedBy=multi-user.target
 
-    - name: Install Grafana
-      apt:
-        name: grafana
-        state: present
-        update_cache: yes
+        - name: Enable service
+          systemd:
+            name: prometheus
+            enabled: yes
+            state: started
+      tags: prometheus
 
-    - name: Start and enable Grafana
-      systemd:
-        name: grafana-server
-        enabled: yes
-        state: started
+    # Alertmanager 설치
+    - name: Deploy Alertmanager
+      block:
+        - name: Download Alertmanager
+          get_url:
+            url: "https://github.com/prometheus/alertmanager/releases/download/v{{ alertmanager_version }}/alertmanager-{{ alertmanager_version }}.linux-amd64.tar.gz"
+            dest: /tmp/alertmanager.tar.gz
 
-    - name: Install Netdata (optional server monitoring tool)
-      shell: bash <(curl -Ss https://my-netdata.io/kickstart.sh) all
-      args:
-        executable: /bin/bash
-      when: ansible_distribution == "Ubuntu"
+        - name: Extract and install
+          unarchive:
+            src: /tmp/alertmanager.tar.gz
+            dest: /usr/local/bin/
+            remote_src: yes
+            extra_opts: ["--strip-components=1"]
+            owner: user1
+            group: user1
+            mode: '0755'
 
-    - name: Download and install Alertmanager
-      get_url:
-        url: "https://github.com/prometheus/alertmanager/releases/download/v{{ alertmanager_version }}/alertmanager-{{ alertmanager_version }}.linux-amd64.tar.gz"
-        dest: "/tmp/alertmanager.tar.gz"
+        - name: Configure Alertmanager
+          copy:
+            dest: /etc/alertmanager/alertmanager.yml
+            content: |
+              route:
+                receiver: 'default'
+              receivers:
+                - name: 'default'
+                  email_configs:
+                    - to: 'alex941song@gmail.com'
+            owner: user1
+            group: user1
+            notify: restart alertmanager
 
-    - name: Extract Alertmanager
-      unarchive:
-        src: "/tmp/alertmanager.tar.gz"
-        dest: "/usr/local/bin/"
-        remote_src: yes
-        extra_opts: ["--strip-components=1"]
+        - name: Configure systemd service
+          copy:
+            dest: /etc/systemd/system/alertmanager.service
+            content: |
+              [Unit]
+              Description=Alertmanager
+              After=network.target prometheus.service
 
-    - name: Create systemd service for Alertmanager
-      copy:
-        dest: "/etc/systemd/system/alertmanager.service"
-        content: |
-          [Unit]
-          Description=Alertmanager
-          After=network.target
+              [Service]
+              User=user1
+              ExecStart=/usr/local/bin/alertmanager \
+                --config.file=/etc/alertmanager/alertmanager.yml \
+                --storage.path=/var/lib/alertmanager
+              Restart=always
 
-          [Service]
-          User=user1
-          ExecStart=/usr/local/bin/alertmanager --config.file=/usr/local/bin/alertmanager.yml
-          Restart=always
+              [Install]
+              WantedBy=multi-user.target
 
-          [Install]
-          WantedBy=multi-user.target
+        - name: Enable service
+          systemd:
+            name: alertmanager
+            enabled: yes
+            state: started
+      tags: alertmanager
 
-    - name: Start and enable Alertmanager
-      systemd:
-        name: alertmanager
-        enabled: yes
-        state: started
+    # Grafana 설치
+    - name: Deploy Grafana
+      block:
+        - name: Add Grafana repository
+          apt_repository:
+            repo: "deb https://packages.grafana.com/oss/deb stable main"
+            state: present
+            update_cache: yes
+
+        - name: Install Grafana
+          apt:
+            name: "grafana={{ grafana_version }}"
+            state: present
+
+        - name: Configure Grafana security
+          ini_file:
+            path: /etc/grafana/grafana.ini
+            section: security
+            option: admin_password
+            value: "{{ grafana_admin_password }}"
+            backup: yes
+            mode: 0640
+            notify: restart grafana
+
+        - name: Enable service
+          systemd:
+            name: grafana-server
+            enabled: yes
+            state: started
+      tags: grafana
+
+    # # 방화벽 설정
+    # - name: Configure firewall
+    #   ufw:
+    #     rule: allow
+    #     port: "{{ item }}"
+    #     proto: tcp
+    #   loop: "{{ monitoring_ports }}"
+    #   when: ansible_os_family == 'Debian'
+
+    # # Netdata 설치 (옵션)
+    # - name: Install Netdata
+    #   include_role:
+    #     name: geerlingguy.netdata
+    #   when: ansible_distribution == "Ubuntu"
+    #   tags: netdata
