@@ -20,7 +20,7 @@ pipeline {
             steps {
                 sshagent(['control-server-ssh-key']) {
                     sh '''
-                        rsync -av --exclude='.git' -e "ssh -o StrictHostKeyChecking=no" /var/lib/jenkins/workspace/infra-deploy/ user1@192.168.3.41:/home/user1/infra-deploy/
+                        rsync -av --exclude='.git' -e "ssh -o StrictHostKeyChecking=no" /var/lib/jenkins/workspace/infra-deploy/ user1@192.168.3.129:/home/user1/infra-deploy/
                     '''
                 }
             }
@@ -31,7 +31,7 @@ pipeline {
             steps {
                 sshagent(['control-server-ssh-key']) {
                     sh '''
-                        ssh -o StrictHostKeyChecking=no user1@192.168.3.41 '
+                        ssh -o StrictHostKeyChecking=no user1@192.168.3.129 '
                             cd /home/user1/infra-deploy/ansible &&
                             ansible-playbook -i inventory.yml playbooks/deploy_control.yml --ask-become-pass
 
