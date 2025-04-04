@@ -5,6 +5,17 @@
     ssh_key_path: "/home/user1/.ssh"
     public_key: "{{ lookup('file', ssh_key_path + '/project.pem.pub') }}"
   tasks:
+    # 필수 도구 설치 (Git, curl)
+    - name: Install required tools (Git, curl, vim, wget)
+      apt:
+        name:
+          - git
+          - curl
+          - vim
+          - wget
+          - sshpass
+        state: present 
+
     # .ssh 디렉터리 먼저 만들기
     - name: Ensure .ssh directory exists with correct permissions
       file:
@@ -100,12 +111,4 @@
         - db-server
         - storage-server
 
-    # 필수 도구 설치 (Git, curl)
-    - name: Install required tools (Git, curl, vim, wget)
-      apt:
-        name:
-          - git
-          - curl
-          - vim
-          - wget
-        state: present 
+
