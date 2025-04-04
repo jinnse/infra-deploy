@@ -56,19 +56,31 @@
         dest: /home/user1/.ssh/config
         content: |
           Host web
-            HostName 211.183.3.20
+            HostName 172.16.1.20
             User user1
             IdentityFile /home/user1/.ssh/project.pem
             StrictHostKeyChecking no
 
           Host db
-            HostName 211.183.3.30
+            HostName 172.16.1.30
             User user1
             IdentityFile /home/user1/.ssh/project.pem
             StrictHostKeyChecking no
 
-          Host storage
-            HostName 211.183.3.40
+          Host storage1
+            HostName 172.16.1.40
+            User user1
+            IdentityFile /home/user1/.ssh/project.pem
+            StrictHostKeyChecking no
+
+          Host storage2
+            HostName 172.16.1.50
+            User user1
+            IdentityFile /home/user1/.ssh/project.pem
+            StrictHostKeyChecking no
+
+          Host monitoring
+            HostName 172.16.1.60
             User user1
             IdentityFile /home/user1/.ssh/project.pem
             StrictHostKeyChecking no
@@ -85,7 +97,9 @@
       loop:
         - web-server
         - db-server
-        - storage-server
+        - storage-server1
+        - storage-server2
+        - monitoring-server
 
     - name: Ensure authorized_keys file exists
       ansible.builtin.file:
@@ -98,7 +112,9 @@
       loop:
         - web-server
         - db-server
-        - storage-server
+        - storage-server1
+        - storage-server2
+        - monitoring-server
 
     - name: Add project public key to authorized_keys
       ansible.builtin.authorized_key:
@@ -109,6 +125,8 @@
       loop:
         - web-server
         - db-server
-        - storage-server
+        - storage-server1
+        - storage-server2
+        - monitoring-server
 
 
