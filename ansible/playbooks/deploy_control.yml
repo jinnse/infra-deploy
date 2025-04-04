@@ -3,6 +3,7 @@
   become: true  # root 권한으로 실행
   vars:
     ssh_key_path: "/home/user1/.ssh"
+    public_key: "{{ lookup('file', ssh_key_path + '/project.pem.pub') }}"
   tasks:
     # .ssh 디렉터리 먼저 만들기
     - name: Ensure .ssh directory exists with correct permissions
@@ -62,11 +63,38 @@
             StrictHostKeyChecking no
         mode: '0600'
 
-    - name: Ensure .ssh directory exists with correct permissions
+    - name: Ensure .ssh directory exists on remote servers
+      ansible.builtin.file:
+        path: /home/user1/.ssh
+        state: directory
+        mode: '0700'
+        owner: user1
+        group: user1
       delegate_to: "{{ item }}"
+      loop:
+        - web-server
+        - db-server
+        - storage-server
+
+    - name: Ensure authorized_keys file exists
+      ansible.builtin.file:
+        path: /home/user1/.ssh/authorized_keys
+        state: touch
+        mode: '0600'
+        owner: user1
+        group: user1
+      delegate_to: "{{ item }}"
+      loop:
+        - web-server
+        - db-server
+        - storage-server
+
+    - name: Add project public key to authorized_keys
       ansible.builtin.authorized_key:
+        user: user1
         state: present
-        key: "{{ lookup('file', ssh_key_path + '/project.pem.pub') }}"
+        key: "{{ public_key }}"
+      delegate_to: "{{ item }}"
       loop:
         - web-server
         - db-server
