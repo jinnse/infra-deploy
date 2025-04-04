@@ -1,0 +1,157 @@
+---
+- name: Deploy Monitoring Stack
+  hosts: all
+  become: true
+  vars:
+    prometheus_version: "2.43.0"
+    node_exporter_version: "1.5.0"
+    grafana_version: "9.5.2"
+    alertmanager_version: "0.25.0"
+
+  tasks:
+    - name: Create user1 user
+      user:
+        name: user1
+        system: yes
+        shell: /usr/sbin/nologin
+        create_home: no
+
+    - name: Install dependencies
+      apt:
+        name:
+          - tar
+          - net-tools
+        state: present
+        update_cache: yes
+
+    - name: Download and install Node Exporter
+      get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/node_exporter.tar.gz"
+
+    - name: Extract Node Exporter
+      unarchive:
+        src: "/tmp/node_exporter.tar.gz"
+        dest: "/usr/local/bin/"
+        remote_src: yes
+        extra_opts: ["--strip-components=1"]
+
+    - name: Create systemd service for Node Exporter
+      copy:
+        dest: "/etc/systemd/system/node_exporter.service"
+        content: |
+          [Unit]
+          Description=Node Exporter
+          After=network.target
+
+          [Service]
+          User=user1
+          ExecStart=/usr/local/bin/node_exporter
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Start and enable Node Exporter
+      systemd:
+        name: node_exporter
+        enabled: yes
+        state: started
+
+    - name: Download and install Prometheus
+      get_url:
+        url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/prometheus.tar.gz"
+
+    - name: Extract Prometheus
+      unarchive:
+        src: "/tmp/prometheus.tar.gz"
+        dest: "/usr/local/bin/"
+        remote_src: yes
+        extra_opts: ["--strip-components=1"]
+
+    - name: Create Prometheus configuration
+      copy:
+        dest: "/usr/local/bin/prometheus.yml"
+        content: |
+          global:
+            scrape_interval: 15s
+
+          scrape_configs:
+            - job_name: 'node'
+              static_configs:
+                - targets: ['localhost:9100']
+
+    - name: Create systemd service for Prometheus
+      copy:
+        dest: "/etc/systemd/system/prometheus.service"
+        content: |
+          [Unit]
+          Description=Prometheus Server
+          After=network.target
+
+          [Service]
+          User=user1
+          ExecStart=/usr/local/bin/prometheus --config.file=/usr/local/bin/prometheus.yml
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Start and enable Prometheus
+      systemd:
+        name: prometheus
+        enabled: yes
+        state: started
+
+    - name: Install Grafana
+      apt:
+        name: grafana
+        state: present
+        update_cache: yes
+
+    - name: Start and enable Grafana
+      systemd:
+        name: grafana-server
+        enabled: yes
+        state: started
+
+    - name: Install Netdata (optional server monitoring tool)
+      shell: bash <(curl -Ss https://my-netdata.io/kickstart.sh) all
+      args:
+        executable: /bin/bash
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Download and install Alertmanager
+      get_url:
+        url: "https://github.com/prometheus/alertmanager/releases/download/v{{ alertmanager_version }}/alertmanager-{{ alertmanager_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/alertmanager.tar.gz"
+
+    - name: Extract Alertmanager
+      unarchive:
+        src: "/tmp/alertmanager.tar.gz"
+        dest: "/usr/local/bin/"
+        remote_src: yes
+        extra_opts: ["--strip-components=1"]
+
+    - name: Create systemd service for Alertmanager
+      copy:
+        dest: "/etc/systemd/system/alertmanager.service"
+        content: |
+          [Unit]
+          Description=Alertmanager
+          After=network.target
+
+          [Service]
+          User=user1
+          ExecStart=/usr/local/bin/alertmanager --config.file=/usr/local/bin/alertmanager.yml
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Start and enable Alertmanager
+      systemd:
+        name: alertmanager
+        enabled: yes
+        state: started
