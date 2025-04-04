@@ -8,20 +8,31 @@ all:
     web:
       hosts:
         web-server:
-          ansible_host: 211.183.3.20
+          ansible_host: 172.16.1.20
           ansible_user: user1
           ansible_ssh_pass: user1
 
     db:
       hosts:
         db-server:
-          ansible_host: 211.183.3.30
+          ansible_host: 172.16.1.30
           ansible_user: user1
           ansible_ssh_pass: user1
 
     storage:
       hosts:
         storage-server:
-          ansible_host: 211.183.3.40
+          ansible_host: 172.16.1.40
+          ansible_user: user1
+          ansible_ssh_pass: user1
+        storage-server2:
+          ansible_host: 172.16.1.50
+          ansible_user: user1
+          ansible_ssh_pass: user1
+
+    monitoring:
+      hosts:
+        monitoring:-server:
+          ansible_host: 172.16.1.60
           ansible_user: user1
           ansible_ssh_pass: user1
