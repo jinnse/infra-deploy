@@ -25,14 +25,11 @@ all:
           ansible_host: 172.16.1.40
           ansible_user: user1
           ansible_ssh_pass: user1
-
-    storage2:
-      hosts:
-        storage2-server:
+        storage-server2:
           ansible_host: 172.16.1.50
           ansible_user: user1
           ansible_ssh_pass: user1
-          
+
     monitoring:
       hosts:
         monitoring:-server:
