@@ -66,7 +66,7 @@
       delegate_to: "{{ item }}"
       ansible.builtin.authorized_key:
         state: present
-        key: "{{ lookup('file', ssh_key_path + '.pub') }}"
+        key: "{{ lookup('file', ssh_key_path + '/project.pem.pub') }}"
       loop:
         - web
         - db
