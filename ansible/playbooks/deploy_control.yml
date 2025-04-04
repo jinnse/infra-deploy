@@ -68,9 +68,9 @@
         state: present
         key: "{{ lookup('file', ssh_key_path + '/project.pem.pub') }}"
       loop:
-        - web
-        - db
-        - storage
+        - web-server
+        - db-server
+        - storage-server
 
     # 필수 도구 설치 (Git, curl)
     - name: Install required tools (Git, curl, vim, wget)

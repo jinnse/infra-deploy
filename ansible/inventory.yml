@@ -7,12 +7,12 @@ all:
 
     web:
       hosts:
-        web-node:
+        web-server:
           ansible_host: 211.183.3.20
 
     db:
       hosts:
-        db-node:
+        db-server:
           ansible_host: 211.183.3.30
 
     storage:
