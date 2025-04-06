@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  # 첫 번째 Flask 앱 인스턴스 (app1)
+  app1:
+    build: .
+    container_name: flask-app1
+    env_file: .env
+    volumes:
+      - /mnt/shared/logs/app:/var/log/myapp
+    ports:
+      - "8000:8000"   # 외부에서 접근 가능
+    networks:
+      - app-net
+    depends_on:
+      - haproxy
+
+  # 두 번째 Flask 앱 인스턴스 (app2)
+  app2:
+    build: .
+    container_name: flask-app2
+    env_file: .env
+    volumes:
+      - /mnt/shared/logs/app:/var/log/myapp
+    ports:
+      - "8001:8000"   # 내부 포트는 동일, 외부 포트만 다르게
+    networks:
+      - app-net
+    depends_on:
+      - haproxy
+
+  # 로그 확인용 컨테이너
+  logger:
+    image: busybox
+    container_name: log-printer
+    command: tail -F /var/log/myapp/app.log
+    volumes:
+      - /mnt/shared/logs/app:/var/log/myapp
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    driver: bridge
