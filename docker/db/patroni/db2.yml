@@ -1,0 +1,25 @@
+scope: postgres-ha # 클러스터 이름
+name: db2 # 노드 이름
+
+restapi:
+  listen: 0.0.0.0:8008 
+  connect_address: db2:8008
+
+etcd:
+  host: etcd:2379
+
+postgresql:
+  listen: 0.0.0.0:5432
+  connect_address: db2:5432
+  data_dir: /home/postgres/pgdata
+  bin_dir: /usr/lib/postgresql/14/bin
+  authentication:
+    replication:
+      username: replicator
+      password: replicatorpass
+    superuser:
+      username: postgres
+      password: postgres
+  parameters:
+    archive_mode: "on"
+    archive_command: "cd ."

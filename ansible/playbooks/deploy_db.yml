@@ -1,0 +1,71 @@
+---
+- name: Deploy PostgreSQL HA Cluster
+  hosts: db
+  become: true
+
+  vars:
+    deploy_root: /home/user1/docker/db_deploy               # 원격 서버에 생성할 디렉토리
+    local_project_root: ../../docker/db                    # 로컬에서 복사할 파일 기준 경로
+    patroni_files:
+      - db1.yml
+      - db2.yml
+
+  tasks:
+    # 1. Docker 설치
+    - name: Ensure Docker is installed
+      include_role:
+        name: docker
+
+    # 2. 디렉토리 생성 (root, subdirs)
+    - name: Create DB project root directory
+      file:
+        path: "{{ deploy_root }}"
+        state: directory
+        mode: '0755'
+        owner: user1
+        group: user1
+
+    - name: Create patroni and haproxy subdirectories
+      file:
+        path: "{{ deploy_root }}/{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: user1
+        group: user1
+      loop:
+        - patroni
+        - haproxy
+
+    # 3. docker-compose.yml 복사
+    - name: Copy docker-compose.yml
+      copy:
+        src: "{{ local_project_root }}/docker-compose.yml"
+        dest: "{{ deploy_root }}/docker-compose.yml"
+        owner: user1
+        group: user1
+        mode: '0644'
+
+    # 4. patroni 설정 복사
+    - name: Copy Patroni config files
+      copy:
+        src: "{{ local_project_root }}/patroni/{{ item }}"
+        dest: "{{ deploy_root }}/patroni/{{ item }}"
+        owner: user1
+        group: user1
+        mode: '0644'
+      loop: "{{ patroni_files }}"
+
+    # 5. haproxy 설정 복사
+    - name: Copy HAProxy config
+      copy:
+        src: "{{ local_project_root }}/haproxy/haproxy.cfg"
+        dest: "{{ deploy_root }}/haproxy/haproxy.cfg"
+        owner: user1
+        group: user1
+        mode: '0644'
+
+    # 6. docker compose up 실행
+    - name: Launch PostgreSQL HA Cluster
+      shell: docker compose up -d
+      args:
+        chdir: "{{ deploy_root }}"

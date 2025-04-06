@@ -1,0 +1,33 @@
+---
+# Docker 설치용 공통 역할
+
+- name: Install required packages
+  apt:
+    name:
+      - apt-transport-https # HTTPS 지원
+      - ca-certificates # 인증서 관리
+      - curl # curl 설치
+      - software-propertes-common # 소프트웨어 속성 관리
+    state: present
+    update_cache: yes
+
+- name: Add Docker GPG key # GPG 키 추가
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker repository # Docker 저장소 추가
+  apt_repository:
+    repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable
+    state: present
+
+- name: Install Docker # Docker 설치
+  apt:
+    name: docker-ce
+    state: latest
+
+- name: Install Docker Compose
+  get_url:
+    url: https://github.com/docker/compose/releases/download/v2.24.2/docker-compose-linux-x86_64
+    dest: /usr/local/bin/docker-compose
+    mode: '0755'

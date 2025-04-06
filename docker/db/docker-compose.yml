@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+#etcd는 Patroni 클러스터의 상태를 공유하고 리더 선출을 담당하는 분산 키-값 저장소입니다.
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.0networkss
+    container_name: etcd
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=true # 인증 없이 실행 (학습/개발용)
+      - ETCD_NAME=etcd # etcd 노드 이름
+      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd:2380 # 초기 피어 URL 클러스터 간 통신용
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379 # 클라이언트 통신용
+      - ETCD_LISTEN_PEER_URLS=http://etcd:2380 # 피어 통신용
+      - ETCD_LISTEN_CLIENT_URLS=http://etcd:2379 # 클라이언트 통신용
+    ports:
+      - "2379:2379" # 클라이언트 통신용 포트
+      - "2380:2380" # 클러스터 통신용 포트
+    networks:
+      - patroni-net # Docker 네트워크에 연결
+
+# 📌 db1은 Patroni가 붙은 PostgreSQL Primary 후보 노드입니다.
+  db1:
+    image: registry.opensource.zalan.do/acid/patroni:2.1-p1
+    container_name: db1
+    volumes:
+    # - /mnt/shared/db1:/home/postgres/pgdata # 데이터 디렉토리
+      - /home/postgres/pgdata:/home/postgres/pgdata # 데이터 디렉토리
+      - ./patroni/db1.yml:/config/patroni.yml # Patroni 설정 파일
+    environment:
+      - PATRONI_CONFIG_FILE=/config/patroni.yml #Patroni 설정 경로 지정
+    ports:
+      - "5432:5432" # PostgreSQL 포트
+    depends_on:
+      - etcd # etcd 서비스에 의존
+    networks:
+      - patroni-net # Docker 네트워크에 연결
+
+# 📌 db2는 Patroni가 붙은 PostgreSQL Replica입니다.
+  db2:
+    image: registry.opensource.zalan.do/acid/patroni:2.1-p1
+    container_name: db2
+    volumes:
+    # - /mnt/shared/db2:/home/postgres/pgdata                  # db2의 별도 데이터 볼륨
+      - /home/postgres/pgdata:/home/postgres/pgdata # 데이터 디렉토리 
+      - ./patroni/db2.yml:/config/patroni.yml
+    environment:
+      - PATRONI_CONFIG_FILE=/config/patroni.yml
+    ports:
+      - "5433:5432"                                             # 다른 포트로 열어 충돌 방지
+    depends_on:
+      - etcd
+    networks:
+      - patroni-net
+
+ # 🧭 HAProxy는 클라이언트 요청을 현재 Primary PostgreSQL 노드로 자동 라우팅합니다.
+  haproxy:
+    image: haproxy:2.4
+    container_name: haproxy
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "5000:5000"      # 클라이언트는 항상 이 포트로 접속
+    depends_on:
+      - db1
+      - db2
+    networks:
+      - patroni-net
+
+networks:
+  patroni-net:
+    driver: bridge # Docker 브리지 네트워크 사용
