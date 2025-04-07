@@ -36,3 +36,10 @@ all:
           ansible_host: 172.16.1.60
           ansible_user: user1
           ansible_ssh_pass: user1
+
+    app:
+      hosts:
+        app-server:
+          ansible_host: 172.16.1.70
+          ansible_user: user1
+          ansible_ssh_pass: user1
