@@ -56,7 +56,7 @@ pipeline {
         }
 
         // Control Server에서 App Playbook을 실행합니다.
-        stage('Run DB HA Playbook') {
+        stage('Run App Playbook') {
             steps {
                 sshagent(['control-server-ssh-key']) {
                     sh '''
