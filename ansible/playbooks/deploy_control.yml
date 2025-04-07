@@ -84,6 +84,12 @@
             User user1
             IdentityFile /home/user1/.ssh/project.pem
             StrictHostKeyChecking no
+
+          Host app
+            HostName 172.16.1.70
+            User user1
+            IdentityFile /home/user1/.ssh/project.pem
+            StrictHostKeyChecking no
         mode: '0600'
 
     - name: Ensure .ssh directory exists on remote servers
@@ -100,6 +106,7 @@
         - storage-server1
         - storage-server2
         - monitoring-server
+        - app-server
 
     - name: Ensure authorized_keys file exists
       ansible.builtin.file:
@@ -115,6 +122,7 @@
         - storage-server1
         - storage-server2
         - monitoring-server
+        - app-server
 
     - name: Add project public key to authorized_keys
       ansible.builtin.authorized_key:
@@ -128,5 +136,6 @@
         - storage-server1
         - storage-server2
         - monitoring-server
+        - app-server
 
 
