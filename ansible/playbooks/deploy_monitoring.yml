@@ -1,6 +1,6 @@
 ---
 - name: Deploy Advanced Monitoring Stack
-  hosts: all
+  hosts: monitoring
   become: true
   vars:
     prometheus_version: "2.43.0"
@@ -8,7 +8,6 @@
     grafana_version: "9.5.2"
     alertmanager_version: "0.25.0"
     grafana_admin_password: "test123"
-    monitoring_ports: [9090, 9100, 3000, 9093]
 
   handlers:
     - name: restart prometheus
@@ -27,15 +26,13 @@
         state: restarted
 
   tasks:
-    # 사용자 및 권한 설정
     - name: Create monitoring user
       user:
         name: user1
         system: yes
-        shell: /usr/sbin/nologin
-        create_home: no
+        shell: /bin/bash
+        create_home: yes
 
-    # 공통 디렉토리 구조 생성
     - name: Create standard directories
       file:
         path: "{{ item }}"
@@ -48,15 +45,13 @@
         - /etc/alertmanager
         - /var/lib/alertmanager
 
-    # 의존성 설치
     - name: Install base dependencies
       apt:
         name: ["tar", "net-tools", "software-properties-common"]
         update_cache: yes
         cache_valid_time: 3600
 
-    # Node Exporter 설치
-    - name: Deploy Node Exporter
+    - name: Deploy Node Exporter locally
       block:
         - name: Download Node Exporter
           get_url:
@@ -96,7 +91,6 @@
             state: started
       tags: node_exporter
 
-    # Prometheus 설치
     - name: Deploy Prometheus
       block:
         - name: Download Prometheus
@@ -114,9 +108,15 @@
             group: user1
             mode: '0755'
 
-        - name: Generate dynamic targets
+        - name: Generate Prometheus scrape targets dynamically
           set_fact:
-            prometheus_targets: "{% for host in groups['all'] %}'{{ hostvars[host].ansible_host }}:9100'{% if not loop.last %},{% endif %}{% endfor %}"
+            prometheus_targets: >-
+              {{
+                groups['web'] + groups['db'] + groups['storage'] + groups['app']
+                | map('extract', hostvars, ['ansible_host'])
+                | map('regex_replace', '$', ':9100')
+                | list
+              }}
 
         - name: Configure Prometheus
           copy:
@@ -124,14 +124,13 @@
             content: |
               global:
                 scrape_interval: 15s
-
               scrape_configs:
                 - job_name: 'nodes'
                   static_configs:
-                    - targets: [{{ prometheus_targets }}]
+                    - targets: {{ prometheus_targets }}
             owner: user1
             group: user1
-            notify: restart prometheus
+          notify: restart prometheus
 
         - name: Configure systemd service
           copy:
@@ -156,9 +155,34 @@
             name: prometheus
             enabled: yes
             state: started
+            
+        - name: Create alerting rules file
+          copy:
+            dest: /etc/prometheus/rules.yml
+            content: |
+              groups:
+                - name: node_alerts
+                  rules:
+                    - alert: HighCPUUsage
+                      expr: 100 - (avg by (instance)(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100) > 90
+                      for: 1m
+                      labels:
+                        severity: warning
+                      annotations:
+                        summary: "High CPU usage detected on {{ $labels.instance }}"
+                        description: "CPU usage is above 90% for 1 minute."
+            owner: user1
+            group: user1
+          notify: restart prometheus
+
+        - name: Add rule_files to Prometheus config
+          lineinfile:
+            path: /etc/prometheus/prometheus.yml
+            insertafter: 'global:'
+            line: '  rule_files:\n    - "/etc/prometheus/rules.yml"'
+          notify: restart prometheus            
       tags: prometheus
 
-    # Alertmanager 설치
     - name: Deploy Alertmanager
       block:
         - name: Download Alertmanager
@@ -184,11 +208,11 @@
                 receiver: 'default'
               receivers:
                 - name: 'default'
-                  email_configs:
-                    - to: 'alex941song@gmail.com'
+                  webhook_configs:
+                  - url: 'http://dummy.webhook'
             owner: user1
             group: user1
-            notify: restart alertmanager
+          notify: restart alertmanager
 
         - name: Configure systemd service
           copy:
@@ -215,9 +239,13 @@
             state: started
       tags: alertmanager
 
-    # Grafana 설치
     - name: Deploy Grafana
       block:
+        - name: Add Grafana GPG key
+          apt_key:
+            url: https://packages.grafana.com/gpg.key
+            state: present
+
         - name: Add Grafana repository
           apt_repository:
             repo: "deb https://packages.grafana.com/oss/deb stable main"
@@ -237,7 +265,7 @@
             value: "{{ grafana_admin_password }}"
             backup: yes
             mode: 0640
-            notify: restart grafana
+          notify: restart grafana
 
         - name: Enable service
           systemd:
@@ -245,19 +273,3 @@
             enabled: yes
             state: started
       tags: grafana
-
-    # # 방화벽 설정
-    # - name: Configure firewall
-    #   ufw:
-    #     rule: allow
-    #     port: "{{ item }}"
-    #     proto: tcp
-    #   loop: "{{ monitoring_ports }}"
-    #   when: ansible_os_family == 'Debian'
-
-    # # Netdata 설치 (옵션)
-    # - name: Install Netdata
-    #   include_role:
-    #     name: geerlingguy.netdata
-    #   when: ansible_distribution == "Ubuntu"
-    #   tags: netdata
