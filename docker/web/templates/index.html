@@ -5,32 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather App</title>
 
-    <!-- Google Fonts for better typography -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-
+    <!-- Google Fonts - Using modern fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&family=Montserrat:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <!-- Link to the external CSS file -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div class="container">
+        <header class="app-header">
+            <h1><i class="fas fa-cloud-sun"></i> Weather App</h1>
+            <p class="tagline">Your personal weather assistant</p>
+        </header>
 
-<header>
-    Weather Information
-</header>
+        <div class="search-container">
+            <form action="/get_weather" method="POST" class="search-form">
+                <div class="input-group">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" name="city" placeholder="Search for a city..." required>
+                </div>
+                <button type="submit" class="search-btn">
+                    <span>Get Weather</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </form>
+        </div>
 
-<form action="/get_weather" method="POST">
-    <input type="text" name="city" placeholder="Enter city" required>
-    <button type="submit">Get Weather</button>
-</form>
-
-<h2>Saved Weather Information</h2>
-<ul>
-    {% for weather in weather_data %}
-        <li>
-            <span><strong>{{ weather.city }}</strong>: {{ weather.temperature }}°C, {{ weather.description }}</span>
-            <a href="/delete/{{ weather.id }}">Delete</a>
-        </li>
-    {% endfor %}
-</ul>
-
+        <section class="weather-data">
+            <h2><i class="fas fa-bookmark"></i> Saved Weather Information</h2>
+            
+            <div class="weather-list">
+                {% if weather_data %}
+                    {% for weather in weather_data %}
+                        <div class="weather-card">
+                            <div class="weather-info">
+                                <h3 class="city-name">{{ weather.city }}</h3>
+                                <div class="weather-details">
+                                    <span class="temperature">{{ weather.temperature }}°C</span>
+                                    <span class="description">{{ weather.description }}</span>
+                                </div>
+                            </div>
+                            <a href="/delete/{{ weather.id }}" class="delete-btn" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-cloud"></i>
+                        <p>No saved weather data. Search for a city to get started!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
 </body>
 </html>
