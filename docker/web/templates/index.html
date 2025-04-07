@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+
+    <!-- Google Fonts for better typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Link to the external CSS file -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header>
+    Weather Information
+</header>
+
+<form action="/get_weather" method="POST">
+    <input type="text" name="city" placeholder="Enter city" required>
+    <button type="submit">Get Weather</button>
+</form>
+
+<h2>Saved Weather Information</h2>
+<ul>
+    {% for weather in weather_data %}
+        <li>
+            <span><strong>{{ weather.city }}</strong>: {{ weather.temperature }}°C, {{ weather.description }}</span>
+            <a href="/delete/{{ weather.id }}">Delete</a>
+        </li>
+    {% endfor %}
+</ul>
+
+</body>
+</html>
