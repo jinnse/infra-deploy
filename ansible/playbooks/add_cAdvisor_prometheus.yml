@@ -1,0 +1,29 @@
+---
+- name: Add cAdvisor job to Prometheus config
+  hosts: monitoring
+  become: true
+
+  vars:
+    prometheus_config_file: /etc/prometheus/prometheus.yml
+    cadvisor_targets: |
+      - job_name: 'cadvisor'
+        static_configs:
+          - targets:
+              - 172.16.1.20:8080
+              - 172.16.1.30:8080
+              - 172.16.1.70:8080
+
+  handlers:
+    - name: restart prometheus
+      systemd:
+        name: prometheus
+        state: restarted
+
+  tasks:
+    - name: Add cAdvisor scrape job to Prometheus config
+      blockinfile:
+        path: "{{ prometheus_config_file }}"
+        marker: "# {mark} ANSIBLE MANAGED CADVISOR JOB"
+        insertafter: 'scrape_configs:'
+        block: "{{ cadvisor_targets }}"
+      notify: restart prometheus
