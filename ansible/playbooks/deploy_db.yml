@@ -11,7 +11,7 @@
       - db2.yml
 
   tasks:
-    # 1. Docker 설치 roles/docker/tasks/main.yml의 작업을 실행해줘
+    # 1. Docker 설치 roles/docker/tasks/main.yml의 작업 실행
     - name: Ensure Docker is installed
       include_role:
         name: common
@@ -69,3 +69,55 @@
       shell: docker compose up -d
       args:
         chdir: "{{ deploy_root }}"
+
+    # 7. GlusterFS 설치 및 마운트
+    - name: install glusterfs
+      apt:
+        name: glusterfs-client
+        state: present
+
+    - name: unmount glusterfs
+      shell: |
+        umount -l shared/mnt/db1
+        umount -l shared/mnt/db2
+      ignore_errors: true
+
+    - name: Remove mount dir db1
+      file:
+        path: shared/mnt/db1
+        state: absent
+      ignore_errors: true
+
+    - name: Remove mount dir db2
+      file:
+        path: shared/mnt/db2
+        state: absent
+      ignore_errors: true
+
+    - name: Create mount dir db1
+      file:
+        path: shared/mnt/db1
+        state: directory
+        mode: '0777'
+
+    - name: Create mount dir db2
+      file:
+        path: shared/mnt/db2
+        state: directory
+        mode: '0777'
+
+    - name: GlusterFS mount db1
+      mount:
+        path: "shared/mnt/db1"
+        src: "172.16.1.40:db1"
+        fstype: glusterfs
+        opts: defaults,_netdev
+        state: mounted
+
+    - name: GlusterFS mount db2
+      mount:
+        path: "shared/mnt/db2"
+        src: "172.16.1.40:db2"
+        fstype: glusterfs
+        opts: defaults,_netdev
+        state: mounted
