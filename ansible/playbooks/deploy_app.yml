@@ -17,7 +17,7 @@
     # Docker 설치
     - name: Ensure Docker is installed
       include_role:
-        name: docker
+        name: common
 
     # 디렉토리 생성
     - name: Create app project directory
