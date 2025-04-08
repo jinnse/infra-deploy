@@ -12,6 +12,16 @@
         src: /tmp/node_exporter.tar.gz
         dest: /opt/
         remote_src: yes
+        
+    - name: 기존 node_exporter 바이너리 제거 (파일로 존재할 경우)
+      file:
+        path: /usr/local/bin/node_exporter
+        state: absent
+      when: >
+        ansible_facts['user_id'] is defined and
+        (ansible_facts['user_id'] != 'root' or
+        (ansible_facts['user_id'] == 'root' and
+        lookup('file', '/usr/local/bin/node_exporter', errors='ignore') != ''))
 
     - name: 심볼릭 링크 생성
       file:
