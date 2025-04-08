@@ -16,9 +16,9 @@
     url: https://download.docker.com/linux/ubuntu/gpg
     state: present
 
-- name: Add Docker repository # Docker 저장소 추가
+- name: Add Docker repository
   apt_repository:
-    repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
     state: present
 
 - name: Install Docker # Docker 설치
