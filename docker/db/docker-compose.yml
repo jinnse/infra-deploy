@@ -3,7 +3,7 @@ version: '3.8'
 services:
 #etcd는 Patroni 클러스터의 상태를 공유하고 리더 선출을 담당하는 분산 키-값 저장소입니다.
   etcd:
-    image: quay.io/coreos/etcd:v3.5.0networkss
+    image: quay.io/coreos/etcd:v3.5.0
     container_name: etcd
     environment:
       - ALLOW_NONE_AUTHENTICATION=true # 인증 없이 실행 (학습/개발용)
@@ -15,6 +15,7 @@ services:
     ports:
       - "2379:2379" # 클라이언트 통신용 포트
       - "2380:2380" # 클러스터 통신용 포트
+    restart: unless-stopped # 컨테이너가 중지되면 자동으로 재시작
     networks:
       - patroni-net # Docker 네트워크에 연결
 
@@ -23,8 +24,7 @@ services:
     image: registry.opensource.zalan.do/acid/patroni:2.1-p1
     container_name: db1
     volumes:
-    # - /mnt/shared/db1:/home/postgres/pgdata # 데이터 디렉토리
-      - /home/postgres/pgdata:/home/postgres/pgdata # 데이터 디렉토리
+      - /mnt/shared/db1:/home/postgres/pgdata # 데이터 디렉토리
       - ./patroni/db1.yml:/config/patroni.yml # Patroni 설정 파일
     environment:
       - PATRONI_CONFIG_FILE=/config/patroni.yml #Patroni 설정 경로 지정
@@ -40,8 +40,7 @@ services:
     image: registry.opensource.zalan.do/acid/patroni:2.1-p1
     container_name: db2
     volumes:
-    # - /mnt/shared/db2:/home/postgres/pgdata                  # db2의 별도 데이터 볼륨
-      - /home/postgres/pgdata:/home/postgres/pgdata # 데이터 디렉토리 
+      - /mnt/shared/db2:/home/postgres/pgdata                  # db2의 별도 데이터 볼륨
       - ./patroni/db2.yml:/config/patroni.yml
     environment:
       - PATRONI_CONFIG_FILE=/config/patroni.yml
