@@ -12,6 +12,7 @@ services:
       - "8000:8000"   # 외부에서 접근 가능
     networks:
       - app-net
+    restart: always
 
   # 두 번째 Flask 앱 인스턴스 (app2)
   app2:
@@ -24,6 +25,7 @@ services:
       - "8001:8000"   # 내부 포트는 동일, 외부 포트만 다르게
     networks:
       - app-net
+    restart: always
 
   # 로그 확인용 컨테이너
   logger:

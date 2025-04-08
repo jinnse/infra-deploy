@@ -57,9 +57,16 @@
         - main.py
         - config.py
 
+    # 기존 컨테이너 제거
+    - name: Stop and remove existing containers
+      shell: docker compose down || true
+      args:
+        chdir: "{{ deploy_root }}"
+      ignore_errors: true
+
     # Compose 실행
     - name: Launch Flask app containers
-      shell: docker compose up -d
+      shell: docker compose up -d --build --force-recreate
       args:
         chdir: "{{ deploy_root }}"
 

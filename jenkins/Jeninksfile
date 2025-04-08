@@ -8,10 +8,10 @@ pipeline {
             }
         }
 
-        //  Git에서 코드를 클론합니다.
+        // Git에서 코드를 클론합니다.
         stage('Clone Repository') {
             steps {
-                git branch: 'app_deploy', url: 'https://github.com/Jaeki-Lee/infra-deploy.git'
+                git branch: 'main', url: 'https://github.com/Jaeki-Lee/infra-deploy.git'
             }
         }
 
@@ -20,29 +20,68 @@ pipeline {
             steps {
                 sshagent(['control-server-ssh-key']) {
                     sh '''
-                        rsync -av --exclude='.git' -e "ssh -o StrictHostKeyChecking=no" /var/lib/jenkins/workspace/monitoring/ user1@192.168.3.129:/home/user1/infra-deploy/
+                        rsync -av --exclude='.git' -e "ssh -o StrictHostKeyChecking=no" /var/lib/jenkins/workspace/infra-deploy/ user1@192.168.3.129:/home/user1/infra-deploy/
                     '''
                 }
             }
         }
 
-        //  Control Server에서 Ansible Playbook을 실행합니다.
-        stage('Run Ansible Playbook') {
+        // Control Server에서 Control Playbook 실행
+        stage('Run Control Playbook') {
             steps {
                 sshagent(['control-server-ssh-key']) {
                     sh '''
                         ssh -o StrictHostKeyChecking=no user1@192.168.3.129 '
                             cd /home/user1/infra-deploy/ansible &&
                             ansible-playbook -i inventory.yml playbooks/deploy_control.yml --ask-become-pass
-
                         '
                     '''
                 }
             }
         }
 
-        // Control Server에서 DB Playbook을 실행합니다.
-        stage('Run DB HA Playbook') {
+         //  Control Server에서 deploy_storage_gluster Playbook을 실행합니다.
+        stage('Run Ansible Playbook gluster') {
+            steps {
+                sshagent(['control-server-ssh-key']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no user1@192.168.3.129 "
+                        cd /home/user1/infra-deploy/ansible &&
+                        ansible-playbook -i inventory.yml playbooks/deploy_storage_gluster.yml --ask-become-pass --limit storage
+                    "
+                """
+                }
+            }
+        }
+
+
+
+        //  Control Server에서 Ansible Playbook을 실행 cron으로 s3 백업 
+        stage('Run Ansible Playbook cron') {
+            steps {
+                sshagent(['control-server-ssh-key']) {
+                    withCredentials([string(credentialsId: 'ANSIBLE_VAULT_PASSWORD', variable: 'VAULT_PASS')]) {
+                        sh """
+                            # 1. vault_pass.txt 생성
+                            echo "$VAULT_PASS" > ansible/vault_pass.txt
+                            chmod 600 ansible/vault_pass.txt
+
+                            # 2. 복사
+                            scp -o StrictHostKeyChecking=no ansible/vault_pass.txt user1@192.168.3.129:/home/user1/infra-deploy/ansible/vault_pass.txt
+
+                            # 3. 원격에서 Ansible 실행
+                            ssh -o StrictHostKeyChecking=no user1@192.168.3.129 "
+                                cd /home/user1/infra-deploy/ansible &&
+                                ansible-playbook playbooks/backup_cron.yml -i inventory.yml --vault-password-file ./vault_pass.txt
+                        "
+                    """
+                    }
+                }
+            }
+        }
+
+        // Control Server에서 DB Playbook 실행
+        stage('Run DB Playbook') {
             steps {
                 sshagent(['control-server-ssh-key']) {
                     sh '''
@@ -55,21 +94,36 @@ pipeline {
             }
         }
 
-        // // Control Server에서 App Playbook을 실행합니다.
-        // stage('Run App Playbook') {
-        //     steps {
-        //         sshagent(['control-server-ssh-key']) {
-        //             sh '''
-        //                 ssh -o StrictHostKeyChecking=no user1@192.168.3.129 '
-        //                     cd /home/user1/infra-deploy/ansible &&
-        //                     ansible-playbook -i inventory.yml playbooks/deploy_app.yml --ask-become-pass
-        //                 '
-        //             '''
-        //         }
-        //     }
-        // }
+        // Control Server에서 App Playbook 실행
+        stage('Run App Playbook') {
+            steps {
+                sshagent(['control-server-ssh-key']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no user1@192.168.3.129 '
+                            cd /home/user1/infra-deploy/ansible &&
+                            ansible-playbook -i inventory.yml playbooks/deploy_app.yml --ask-become-pass
+                        '
+                    '''
+                }
+            }
+        }
 
-                stage('Run Monitoring Playbook') {
+        // Control Server에서 Web Playbook 실행
+        stage('Run Web Playbook') {
+            steps {
+                sshagent(['control-server-ssh-key']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no user1@192.168.3.129 '
+                            cd /home/user1/infra-deploy/ansible &&
+                            ansible-playbook -i inventory.yml playbooks/deploy_web.yml --ask-become-pass
+                        '
+                    '''
+                }
+            }
+        }
+
+         // Control Server에서 Monitoring Playbook 실행
+        stage('Run Monitoring Playbook') {
             steps {
                 sshagent(['control-server-ssh-key']) {
                     sh '''
@@ -81,6 +135,6 @@ pipeline {
                 }
             }
         }
-
-    }
+        
+    } 
 }
