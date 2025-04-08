@@ -109,13 +109,3 @@
       copy:
         src: ../../docker/monitoring/grafana/node_exporter_dashboard.json
         dest: /opt/monitoring/grafana/dashboards/node_exporter_dashboard.json
-
-    - name: Alertmanager 설정 복사
-      copy:
-        src: ../../docker/monitoring/alertmanager.yml
-        dest: /opt/monitoring/
-
-    - name: Prometheus 알림 룰 복사
-      copy:
-        src: ../../docker/monitoring/alert_rules.yml
-        dest: /opt/monitoring/

@@ -1,11 +1,11 @@
 groups:
-  - name: node_alerts
+  - name: node-alerts
     rules:
-      - alert: InstanceDown
-        expr: up == 0
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100) > 80
         for: 1m
         labels:
-          severity: critical
+          severity: warning
         annotations:
-          summary: "{{ $labels.instance }} is down"
-          description: "Instance {{ $labels.instance }} has been down for 1 minute."
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 80% for more than 1 minute."
