@@ -1,0 +1,60 @@
+---
+- name: 스토리지 서버 환경 구성 (NFS 서버)
+  hosts: storage_server
+  become: true
+
+  vars:
+    shared_db1_dir: /mnt/shared/db1
+    shared_db2_dir: /mnt/shared/db2
+    shared_webapp_dir: /mnt/shared/webapp
+    shared_monitoring_dir: /mnt/shared/monitoring
+
+    exported_dirs:
+      - [ "{{ shared_db1_dir }}", "172.16.1.30" ]
+      - [ "{{ shared_db2_dir }}", "172.16.1.30" ]
+      - [ "{{ shared_webapp_dir }}", "172.16.1.20" ]
+      - [ "{{ shared_monitoring_dir }}", "172.16.1.60" ]
+
+  tasks:
+    - name: NFS 서버 패키지 설치
+      apt:
+        name: nfs-kernel-server
+        state: present
+        update_cache: yes
+      tags: nfs
+
+    - name: 공유 디렉토리 생성
+      file:
+        path: "{{ item[0] }}"
+        state: directory
+        owner: user1
+        group: user1
+        mode: '0777'
+      loop: "{{ exported_dirs }}"
+      tags: nfs
+
+    - name: /etc/exports 설정
+      lineinfile:
+        path: /etc/exports
+        line: "{{ item[0] }} {{ item[1] }}(rw,sync,no_root_squash)"
+        state: present
+        create: yes
+      loop: "{{ exported_dirs }}"
+      tags: nfs
+
+    - name: exportfs 적용
+      command: exportfs -ra
+      tags: nfs
+
+    - name: NFS 서비스 재시작
+      service:
+        name: nfs-kernel-server
+        state: restarted
+      tags: nfs
+
+    - name: 방화벽 - NFS 포트 허용
+      ufw:
+        rule: allow
+        port: 2049
+        proto: tcp
+      tags: firewall

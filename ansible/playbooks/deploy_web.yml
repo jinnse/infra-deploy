@@ -1,0 +1,68 @@
+---
+- name: Deploy Flask Weather App
+  hosts: web  # 서버 그룹 이름 또는 IP를 지정
+  become: yes  # 관리자 권한으로 작업 수행
+  vars:
+    app_name: "weather-app"
+    app_dir: "/home/user1/{{ app_name }}"
+    docker_image_name: "weather-app"
+    docker_container_name: "weather-app-container"
+    port: 5000
+    api_key: "{{ lookup('env', 'API_KEY') }}"
+  
+  tasks:
+    - name: Install required packages (Python, Docker, Git)
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - docker.io
+          - git
+        state: present
+        update_cache: yes
+
+    - name: Clone the Flask application from Git (if applicable)
+      git:
+        repo: 'https://github.com/Jaeki-Lee/infra-deploy.git'  # Git 리포지토리 주소
+        dest: "{{ app_dir }}"
+        version: main
+        force: yes
+
+    - name: Set environment variables from Jenkins credentials
+      block:
+        - name: Set environment variable from Jenkins API Key
+          set_fact:
+            flask_api_key: "{{ api_key }}"
+
+    - name: Install required Python packages from requirements.txt
+      pip:
+        requirements: "{{ app_dir }}/requirements.txt"
+        executable: pip3
+
+    - name: Build Docker image for the Flask app
+      docker_image:
+        build:
+          path: "{{ app_dir }}"
+          name: "{{ docker_image_name }}"
+        force: yes
+
+    - name: Run the Flask application in Docker container
+      docker_container:
+        name: "{{ docker_container_name }}"
+        image: "{{ docker_image_name }}"
+        state: started
+        ports:
+          - "{{ port }}:5000"  # Flask 앱 포트 매핑
+        restart_policy: always  # 서버 재시작 시 항상 컨테이너 재시작
+
+    - name: Verify the Flask app is running
+      uri:
+        url: "http://localhost:{{ port }}"
+        status_code: 200
+        method: GET
+        return_content: yes
+      register: result
+
+    - name: Output Flask app status
+      debug:
+        msg: "Flask app is running at http://localhost:{{ port }}"

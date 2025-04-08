@@ -17,7 +17,7 @@
     # Docker 설치
     - name: Ensure Docker is installed
       include_role:
-        name: docker
+        name: common
 
     # 디렉토리 생성
     - name: Create app project directory
@@ -62,3 +62,34 @@
       shell: docker compose up -d
       args:
         chdir: "{{ deploy_root }}"
+
+    # 7. GlusterFS 설치 및 마운트
+    - name: install glusterfs
+      apt:
+        name: glusterfs-client
+        state: present
+
+    - name: unmount glusterfs
+      shell: |
+        umount -l shared/mnt/logs/app
+      ignore_errors: true
+
+    - name: Remove mount dir app logs
+      file:
+        path: shared/mnt/logs/app
+        state: absent
+      ignore_errors: true
+
+    - name: Create mount dir app logs
+      file:
+        path: shared/mnt/logs/app
+        state: directory
+        mode: '0777'
+
+    - name: GlusterFS mount app logs
+      mount:
+        path: "shared/mnt/logs/app"
+        src: "172.16.1.40:app"
+        fstype: glusterfs
+        opts: defaults,_netdev
+        state: mounted
