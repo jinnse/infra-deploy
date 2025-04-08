@@ -1,0 +1,51 @@
+scope: postgres-ha # 클러스터 이름
+name: db1 # 노드 이름
+
+restapi:  #Patroni 상태 확인용 REST API
+  listen: 0.0.0.0:8008
+  connect_address: db1:8008
+
+etcd: # etcd 클러스터 리더 선출용 etcd 서버 설정
+  host: etcd:2379
+
+bootstrap:  # 최초 부트스트랩 시 설정
+  dcs:   # 클러스터 공통 설정
+    ttl: 30 # 클러스터 노드의 TTL (Time To Live) 설정
+    loop_wait: 10 # 클러스터 상태 확인 주기
+    retry_timeout: 10 # 클러스터 상태 확인 재시도 대기 시간
+    maximum_lag_on_failover: 1048576 # 최대 지연 시간 (1MB)
+    postgresql: # PostgreSQL 설정
+      use_pg_rewind: true # pg_rewind 사용 여부
+      parameters: # PostgreSQL 파라미터 설정
+        wal_level: replica # WAL 레벨 설정
+        hot_standby: "on" # 핫 스탠바이 설정
+        max_wal_senders: 10 # 최대 WAL 송신자 수
+        max_replication_slots: 10 # 최대 복제 슬롯 수
+        wal_keep_segments: 8 # WAL 보관 세그먼트 수
+
+initdb:
+  - encoding: UTF8 # 데이터베이스 인코딩 설정
+  - locale: en_US.UTF-8 # 로케일 설정
+
+users:
+  user1:
+    password: user1 # 사용자 비밀번호 설정
+    options:
+      - createrole # 역할 생성 권한 부여
+      - createdb # 데이터베이스 생성 권한 부여
+
+postgresql:
+  listen: 0.0.0.0:5432 # PostgreSQL 리스닝 주소 및 포트
+  connect_address: db1:5432 # PostgreSQL 연결 주소 및 포트
+  data_dir: /home/postgres/pgdata # PostgreSQL 데이터 디렉토리
+  bin_dir: /usr/lib/postgresql/14/bin # PostgreSQL 바이너리 디렉토리
+  authentication:
+    replication:
+      username: replicator # 복제 사용자 이름
+      password: replicatorpass # 복제 사용자 비밀번호
+    superuser:
+      username: postgres # 슈퍼유저 이름
+      password: postgres # 슈퍼유저 비밀번호
+  parameters:
+    archive_mode: "on"
+    archive_command: "cd ."

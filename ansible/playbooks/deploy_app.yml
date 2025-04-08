@@ -1,0 +1,64 @@
+---
+- name: Deploy Flask App Cluster
+  hosts: app
+  become: true
+
+  vars:
+    deploy_root: /home/user1/docker/app_deploy  # 원격 서버에 생성할 디렉토리
+    local_project_root: ../../docker/app
+    flask_app_files:
+      - Dockerfile
+      - docker-compose.yml
+      - requirements.txt
+      - .env
+    flask_app_dir: app  # app/main.py, app/config.py 포함
+
+  tasks:
+    # Docker 설치
+    - name: Ensure Docker is installed
+      include_role:
+        name: docker
+
+    # 디렉토리 생성
+    - name: Create app project directory
+      file:
+        path: "{{ deploy_root }}"
+        state: directory
+        mode: '0755'
+        owner: user1
+        group: user1
+
+    - name: Create app subdirectory
+      file:
+        path: "{{ deploy_root }}/{{ flask_app_dir }}"
+        state: directory
+        mode: '0755'
+        owner: user1
+        group: user1
+
+    # 애플리케이션 관련 파일 복사
+    - name: Copy base files (Dockerfile, .env, requirements.txt, compose)
+      copy:
+        src: "{{ local_project_root }}/{{ item }}"
+        dest: "{{ deploy_root }}/{{ item }}"
+        owner: user1
+        group: user1
+        mode: '0644'
+      loop: "{{ flask_app_files }}"
+
+    - name: Copy Flask app code (main.py, config.py)
+      copy:
+        src: "{{ local_project_root }}/{{ flask_app_dir }}/{{ item }}"
+        dest: "{{ deploy_root }}/{{ flask_app_dir }}/{{ item }}"
+        owner: user1
+        group: user1
+        mode: '0644'
+      loop:
+        - main.py
+        - config.py
+
+    # Compose 실행
+    - name: Launch Flask app containers
+      shell: docker compose up -d
+      args:
+        chdir: "{{ deploy_root }}"

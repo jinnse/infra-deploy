@@ -8,14 +8,14 @@ pipeline {
             }
         }
 
-        // 첫 번째 단계: Git에서 코드를 클론합니다.
+        //  Git에서 코드를 클론합니다.
         stage('Clone Repository') {
             steps {
-                git branch: 'main', url: 'https://github.com/Jaeki-Lee/infra-deploy.git'
+                git branch: 'WebAndDBDeploy', url: 'https://github.com/Jaeki-Lee/infra-deploy.git'
             }
         }
 
-        // 두 번째 단계: Control Server로 코드를 전송합니다.
+        // Control Server로 코드를 전송합니다.
         stage('Transfer to Control Server') {
             steps {
                 sshagent(['control-server-ssh-key']) {
@@ -26,7 +26,7 @@ pipeline {
             }
         }
 
-        // 세 번째 단계: Control Server에서 Ansible Playbook을 실행합니다.
+        //  Control Server에서 Ansible Playbook을 실행합니다.
         stage('Run Ansible Playbook') {
             steps {
                 sshagent(['control-server-ssh-key']) {
@@ -40,5 +40,34 @@ pipeline {
                 }
             }
         }
+
+        // Control Server에서 DB HA Playbook을 실행합니다.
+        stage('Run DB HA Playbook') {
+            steps {
+                sshagent(['control-server-ssh-key']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no user1@192.168.3.129 '
+                            cd /home/user1/infra-deploy/ansible &&
+                            ansible-playbook -i inventory.yml playbooks/deploy_db.yml --ask-become-pass
+                        '
+                    '''
+                }
+            }
+        }
+
+        // Control Server에서 App Playbook을 실행합니다.
+        stage('Run App Playbook') {
+            steps {
+                sshagent(['control-server-ssh-key']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no user1@192.168.3.129 '
+                            cd /home/user1/infra-deploy/ansible &&
+                            ansible-playbook -i inventory.yml playbooks/deploy_app.yml --ask-become-pass
+                        '
+                    '''
+                }
+            }
+        }
+
     }
 }
