@@ -26,8 +26,8 @@ pipeline {
             }
         }
 
-        // Control Server에서 Control Playbook 실행
-        stage('Run Control Playbook') {
+        //  Control Server에서 control Playbook을 실행합니다.
+        stage('Run Ansible Playbook') {
             steps {
                 sshagent(['control-server-ssh-key']) {
                     sh '''
@@ -40,7 +40,7 @@ pipeline {
             }
         }
 
-         //  Control Server에서 deploy_storage_gluster Playbook을 실행합니다.
+        //  Control Server에서 storage Playbook을 실행합니다.
         stage('Run Ansible Playbook gluster') {
             steps {
                 sshagent(['control-server-ssh-key']) {
@@ -53,8 +53,6 @@ pipeline {
                 }
             }
         }
-
-
 
         //  Control Server에서 Ansible Playbook을 실행 cron으로 s3 백업 
         stage('Run Ansible Playbook cron') {
@@ -80,8 +78,8 @@ pipeline {
             }
         }
 
-        // Control Server에서 DB Playbook 실행
-        stage('Run DB Playbook') {
+        // Control Server에서 DB Playbook을 실행합니다.
+        stage('Run DB HA Playbook') {
             steps {
                 sshagent(['control-server-ssh-key']) {
                     sh '''
@@ -94,7 +92,7 @@ pipeline {
             }
         }
 
-        // Control Server에서 App Playbook 실행
+        // Control Server에서 App Playbook을 실행합니다.
         stage('Run App Playbook') {
             steps {
                 sshagent(['control-server-ssh-key']) {
@@ -108,7 +106,7 @@ pipeline {
             }
         }
 
-        // Control Server에서 Web Playbook 실행
+        // Control Server에서 Web Playbook을 실행합니다.
         stage('Run Web Playbook') {
             steps {
                 sshagent(['control-server-ssh-key']) {
@@ -122,7 +120,6 @@ pipeline {
             }
         }
 
-         // Control Server에서 Monitoring Playbook 실행
         stage('Run Monitoring Playbook') {
             steps {
                 sshagent(['control-server-ssh-key']) {
