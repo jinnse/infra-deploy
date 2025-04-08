@@ -12,7 +12,7 @@
         src: /tmp/node_exporter.tar.gz
         dest: /opt/
         remote_src: yes
-        
+
     - name: 기존 node_exporter 바이너리 제거 (파일로 존재할 경우)
       file:
         path: /usr/local/bin/node_exporter
@@ -63,11 +63,9 @@
       - storage2:9100
       - control:9100
   tasks:
-    - name: Docker & Docker Compose 설치
-      apt:
-        name: [docker.io, docker-compose]
-        state: present
-        update_cache: yes
+    - name: Ensure Docker is installed
+      include_role:
+        name: common
 
     - name: 모니터링 디렉토리 구성
       file:
@@ -75,17 +73,19 @@
         state: directory
         recurse: yes
 
-    - name: Prometheus 설정 파일 배포
+    - name: Prometheus 설정 파일 배포 
       copy:
         dest: /opt/monitoring/prometheus.yml
         content: |
           global:
             scrape_interval: 15s
+
           scrape_configs:
             - job_name: 'node_exporters'
               static_configs:
                 - targets:
-                    {{ prometheus_targets | to_nice_yaml(indent=6) }}
+                    {{ prometheus_targets | to_yaml | indent(20) }}
+
 
     - name: docker-compose.yml 배포
       copy:

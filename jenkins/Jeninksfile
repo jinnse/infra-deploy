@@ -20,7 +20,7 @@ pipeline {
             steps {
                 sshagent(['control-server-ssh-key']) {
                     sh '''
-                        rsync -av --exclude='.git' -e "ssh -o StrictHostKeyChecking=no" /var/lib/jenkins/workspace/infra-deploy/ user1@192.168.3.129:/home/user1/infra-deploy/
+                        rsync -av --exclude='.git' -e "ssh -o StrictHostKeyChecking=no" /var/lib/jenkins/workspace/monitoring/ user1@192.168.3.129:/home/user1/infra-deploy/
                     '''
                 }
             }
