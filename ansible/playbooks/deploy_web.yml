@@ -36,13 +36,13 @@
 
     - name: Install required Python packages from requirements.txt
       pip:
-        requirements: "{{ app_dir }}/requirements.txt"
+        requirements: "{{ app_dir }}/docker/web/requirements.txt"
         executable: pip3
 
     - name: Build Docker image for the Flask app
       docker_image:
         build:
-          path: "{{ app_dir }}"
+          path: "{{ app_dir }}/docker/web/"
           name: "{{ docker_image_name }}"
         force: yes
 
