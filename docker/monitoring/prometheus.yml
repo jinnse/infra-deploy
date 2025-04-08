@@ -12,3 +12,6 @@ scrape_configs:
           - "172.16.1.50:9100"  # storage-server2
           - "172.16.1.60:9100"  # monitoring
           - "172.16.1.70:9100"  # app
+
+rule_files:
+  - "alert_rules.yml"
