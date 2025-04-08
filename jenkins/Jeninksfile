@@ -11,7 +11,7 @@ pipeline {
         //  Git에서 코드를 클론합니다.
         stage('Clone Repository') {
             steps {
-                git branch: 'WebAndDBDeploy', url: 'https://github.com/Jaeki-Lee/infra-deploy.git'
+                git branch: 'app_deploy', url: 'https://github.com/Jaeki-Lee/infra-deploy.git'
             }
         }
 
@@ -41,7 +41,7 @@ pipeline {
             }
         }
 
-        // Control Server에서 DB HA Playbook을 실행합니다.
+        // Control Server에서 DB Playbook을 실행합니다.
         stage('Run DB HA Playbook') {
             steps {
                 sshagent(['control-server-ssh-key']) {

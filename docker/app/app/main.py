@@ -2,6 +2,10 @@ from flask import Flask, jsonify
 import psycopg2
 import logging
 from config import Config
+from dotenv import load_dotenv
+import traceback
+
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -33,5 +37,5 @@ def weather_data():
         conn.close()
         return jsonify(rows)
     except Exception as e:
-        logging.error(f"DB 연결 실패: {e}")
+        logging.error("DB 연결 실패:\n" + traceback.format_exc())
         return jsonify({"error": "DB 연결 실패"}), 500
