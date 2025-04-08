@@ -66,6 +66,15 @@
     - name: Ensure Docker is installed
       include_role:
         name: common
+    
+    - name: docker-compose.yml 배포
+      copy:
+        src: ../../docker/monitoring/docker-compose.yml
+        dest: /opt/monitoring/docker-compose.yml
+
+    - name: Docker Compose로 스택 실행
+      shell: |
+        cd /opt/monitoring && docker-compose up -d
 
     - name: 모니터링 디렉토리 구성
       file:
@@ -73,52 +82,30 @@
         state: directory
         recurse: yes
 
-    - name: Prometheus 타겟 직접 지정
-      set_fact:
-        prometheus_targets:
-          - "172.16.1.10:9100"  # control
-          - "172.16.1.20:9100"  # web
-          - "172.16.1.30:9100"  # db
-          - "172.16.1.40:9100"  # storage-server1
-          - "172.16.1.50:9100"  # storage-server2
-          - "172.16.1.60:9100"  # monitoring-server
-          - "172.16.1.70:9100"  # app
-
-    - name: Prometheus 설정 파일 배포 
+    - name: Prometheus 설정 파일 배포
       copy:
+        src: ../../docker/monitoring/prometheus.yml
         dest: /opt/monitoring/prometheus.yml
-        content: |
-          global:
-            scrape_interval: 15s
 
-          scrape_configs:
-            - job_name: 'node_exporters'
-              static_configs:
-                - targets:
-                    {{ prometheus_targets | to_yaml | indent(20) }}
+    - name: Grafana 디렉토리 생성
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - /opt/monitoring/grafana/provisioning
+        - /opt/monitoring/grafana/dashboards
 
-
-    - name: docker-compose.yml 배포
+    - name: Grafana datasource 설정 복사
       copy:
-        dest: /opt/monitoring/docker-compose.yml
-        content: |
-          version: '3'
-          services:
-            prometheus:
-              image: prom/prometheus
-              volumes:
-                - ./prometheus.yml:/etc/prometheus/prometheus.yml
-              ports:
-                - "9090:9090"
-            grafana:
-              image: grafana/grafana
-              ports:
-                - "3000:3000"
-            alertmanager:
-              image: prom/alertmanager
-              ports:
-                - "9093:9093"
+        src: ../../docker/monitoring/grafana/datasources.yml
+        dest: /opt/monitoring/grafana/provisioning/datasources.yml
 
-    - name: Docker Compose로 스택 실행
-      shell: |
-        cd /opt/monitoring && docker-compose up -d
+    - name: Grafana dashboard 설정 복사
+      copy:
+        src: ../../docker/monitoring/grafana/dashboards.yml
+        dest: /opt/monitoring/grafana/provisioning/dashboards.yml
+
+    - name: Grafana node_exporter dashboard 복사
+      copy:
+        src: ../../docker/monitoring/grafana/node_exporter_dashboard.json
+        dest: /opt/monitoring/grafana/dashboards/node_exporter_dashboard.json
