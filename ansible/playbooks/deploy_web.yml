@@ -25,7 +25,7 @@
       git:
         repo: 'https://github.com/Jaeki-Lee/infra-deploy.git'  # Git 리포지토리 주소
         dest: "{{ app_dir }}"
-        version: master
+        version: main
         force: yes
 
     - name: Copy the .env file to the server
