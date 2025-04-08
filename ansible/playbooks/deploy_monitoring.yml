@@ -92,18 +92,18 @@
         path: "{{ item }}"
         state: directory
       loop:
-        - /opt/monitoring/grafana/provisioning
-        - /opt/monitoring/grafana/dashboards
+        - /opt/monitoring/grafana/provisioning/datasources
+        - /opt/monitoring/grafana/provisioning/dashboards
 
     - name: Grafana datasource 설정 복사
       copy:
         src: ../../docker/monitoring/grafana/datasources.yml
-        dest: /opt/monitoring/grafana/provisioning/datasources.yml
+        dest: /opt/monitoring/grafana/provisioning/datasources/datasources.yml
 
     - name: Grafana dashboard 설정 복사
       copy:
         src: ../../docker/monitoring/grafana/dashboards.yml
-        dest: /opt/monitoring/grafana/provisioning/dashboards.yml
+        dest: /opt/monitoring/grafana/provisioning/dashboards/dashboards.yml
 
     - name: Grafana node_exporter dashboard 복사
       copy:
