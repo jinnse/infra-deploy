@@ -36,13 +36,13 @@
         mode: '0777'
       loop: "{{ volumes }}"
 
-    - name: 로그 저장 디렉토리 생성
-      file:
-        path: "{{ brick_path }}/{{ item.name }}/logs"
-        state: absent
-        mode: '0777'
-      loop: "{{ volumes }}"
-      when: item.name in ['web', 'app', 'monitoring']
+   # - name: 로그 저장 디렉토리 생성
+   #   file:
+   #     path: "{{ brick_path }}/{{ item.name }}/logs"
+   #     state: absent
+   #     mode: '0777'
+   #   loop: "{{ volumes }}"
+   #   when: item.name in ['web', 'app', 'monitoring']
 
 #피어1,2를 하나로 묶는 작업
     - name: Gluster 피어 프로브 (스토리지1에서만 실행)
