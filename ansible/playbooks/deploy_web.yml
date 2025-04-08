@@ -49,6 +49,7 @@
         mode: '0644'
 
     - name: Start nginx container
+      become: true
       shell: docker compose up -d
       args:
         chdir: "{{ deploy_root }}"
