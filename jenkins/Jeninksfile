@@ -11,7 +11,7 @@ pipeline {
         //  Git에서 코드를 클론합니다.
         stage('Clone Repository') {
             steps {
-                git branch: 'WebAndDBDeploy', url: 'https://github.com/Jaeki-Lee/infra-deploy.git'
+                git branch: 'monitoring', url: 'https://github.com/Jaeki-Lee/infra-deploy.git'
             }
         }
 
@@ -55,14 +55,27 @@ pipeline {
             }
         }
 
-        // Control Server에서 App Playbook을 실행합니다.
-        stage('Run App Playbook') {
+        // // Control Server에서 App Playbook을 실행합니다.
+        // stage('Run App Playbook') {
+        //     steps {
+        //         sshagent(['control-server-ssh-key']) {
+        //             sh '''
+        //                 ssh -o StrictHostKeyChecking=no user1@192.168.3.129 '
+        //                     cd /home/user1/infra-deploy/ansible &&
+        //                     ansible-playbook -i inventory.yml playbooks/deploy_app.yml --ask-become-pass
+        //                 '
+        //             '''
+        //         }
+        //     }
+        // }
+
+                stage('Run Monitoring Playbook') {
             steps {
                 sshagent(['control-server-ssh-key']) {
                     sh '''
                         ssh -o StrictHostKeyChecking=no user1@192.168.3.129 '
                             cd /home/user1/infra-deploy/ansible &&
-                            ansible-playbook -i inventory.yml playbooks/deploy_app.yml --ask-become-pass
+                            ansible-playbook -i inventory.yml playbooks/deploy_monitoring.yml --ask-become-pass
                         '
                     '''
                 }
