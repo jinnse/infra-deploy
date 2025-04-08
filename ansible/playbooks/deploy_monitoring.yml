@@ -73,16 +73,16 @@
         state: directory
         recurse: yes
 
-    - name: 인벤토리에서 Prometheus 타겟 생성
+    - name: Prometheus 타겟 직접 지정
       set_fact:
-        prometheus_targets: >-
-          {{
-            groups['all'] | difference(groups['monitoring']) |
-            map('extract', hostvars, 'ansible_host') |
-            select('defined') |
-            map('regex_replace', '(.*)', '\\1:9100') |
-            list
-          }}
+        prometheus_targets:
+          - "172.16.1.10:9100"  # control
+          - "172.16.1.20:9100"  # web
+          - "172.16.1.30:9100"  # db
+          - "172.16.1.40:9100"  # storage-server1
+          - "172.16.1.50:9100"  # storage-server2
+          - "172.16.1.60:9100"  # monitoring-server
+          - "172.16.1.70:9100"  # app
 
     - name: Prometheus 설정 파일 배포 
       copy:
@@ -95,7 +95,7 @@
             - job_name: 'node_exporters'
               static_configs:
                 - targets:
-                    {{ prometheus_targets | to_yaml(quote=True) | indent(20) }}
+                    {{ prometheus_targets | to_yaml | indent(20) }}
 
 
     - name: docker-compose.yml 배포
