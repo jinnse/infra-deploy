@@ -1,0 +1,31 @@
+groups:
+  - name: node_exporter_alerts
+    rules:
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100) > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "고 CPU 사용률 ({{ $labels.instance }})"
+          description: "{{ $labels.instance }}의 CPU 사용률이 80%를 초과했습니다."
+
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "고 메모리 사용률 ({{ $labels.instance }})"
+          description: "{{ $labels.instance }}의 메모리 사용률이 85%를 초과했습니다."
+
+      - alert: HighDiskUsage
+        expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} * 100 > 90
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "고 디스크 사용률 ({{ $labels.instance }})"
+          description: "{{ $labels.instance }}의 루트 디스크 사용률이 90%를 초과했습니다."
+

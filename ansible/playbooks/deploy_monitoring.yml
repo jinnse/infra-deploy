@@ -7,17 +7,28 @@
         url: https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz
         dest: /tmp/node_exporter.tar.gz
 
-    - name: 압축 해제 및 바이너리 이동
+    - name: 압축 해제
       unarchive:
         src: /tmp/node_exporter.tar.gz
         dest: /opt/
         remote_src: yes
+
+    - name: 기존 node_exporter 바이너리 제거 (파일로 존재할 경우)
+      file:
+        path: /usr/local/bin/node_exporter
+        state: absent
+      when: >
+        ansible_facts['user_id'] is defined and
+        (ansible_facts['user_id'] != 'root' or
+        (ansible_facts['user_id'] == 'root' and
+        lookup('file', '/usr/local/bin/node_exporter', errors='ignore') != ''))
 
     - name: 심볼릭 링크 생성
       file:
         src: /opt/node_exporter-1.7.0.linux-amd64/node_exporter
         dest: /usr/local/bin/node_exporter
         state: link
+        force: yes
 
     - name: systemd 서비스 등록
       copy:
@@ -52,51 +63,64 @@
       - storage2:9100
       - control:9100
   tasks:
-    - name: Docker & Docker Compose 설치
-      apt:
-        name: [docker.io, docker-compose]
-        state: present
-        update_cache: yes
+    - name: Ensure Docker is installed
+      include_role:
+        name: common
 
     - name: 모니터링 디렉토리 구성
       file:
         path: /opt/monitoring
         state: directory
         recurse: yes
-
-    - name: Prometheus 설정 파일 배포
-      copy:
-        dest: /opt/monitoring/prometheus.yml
-        content: |
-          global:
-            scrape_interval: 15s
-          scrape_configs:
-            - job_name: 'node_exporters'
-              static_configs:
-                - targets:
-                    {{ prometheus_targets | to_nice_yaml(indent=6) }}
-
+    
     - name: docker-compose.yml 배포
       copy:
+        src: ../../docker/monitoring/docker-compose.yml
         dest: /opt/monitoring/docker-compose.yml
-        content: |
-          version: '3'
-          services:
-            prometheus:
-              image: prom/prometheus
-              volumes:
-                - ./prometheus.yml:/etc/prometheus/prometheus.yml
-              ports:
-                - "9090:9090"
-            grafana:
-              image: grafana/grafana
-              ports:
-                - "3000:3000"
-            alertmanager:
-              image: prom/alertmanager
-              ports:
-                - "9093:9093"
 
     - name: Docker Compose로 스택 실행
       shell: |
         cd /opt/monitoring && docker-compose up -d
+
+    - name: Prometheus 설정 파일 배포
+      copy:
+        src: ../../docker/monitoring/prometheus.yml
+        dest: /opt/monitoring/prometheus.yml
+
+    - name: Grafana 디렉토리 생성
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - /opt/monitoring/grafana/provisioning/datasources
+        - /opt/monitoring/grafana/provisioning/dashboards
+
+    - name: Grafana datasource 설정 복사
+      copy:
+        src: ../../docker/monitoring/grafana/datasources.yml
+        dest: /opt/monitoring/grafana/provisioning/datasources/datasources.yml
+
+    - name: Grafana dashboard 설정 복사
+      copy:
+        src: ../../docker/monitoring/grafana/dashboards.yml
+        dest: /opt/monitoring/grafana/provisioning/dashboards/dashboards.yml
+
+    - name: Grafana node_exporter dashboard 복사
+      copy:
+        src: ../../docker/monitoring/grafana/node_exporter_dashboard.json
+        dest: /opt/monitoring/grafana/dashboards/node_exporter_dashboard.json
+
+    - name: Alertmanager 디렉토리 생성
+      file:
+        path: /opt/monitoring/alertmanager
+        state: directory
+
+    - name: Alertmanager 설정 파일 복사
+      copy:
+        src: ../../docker/monitoring/alertmanager/alertmanager.yml
+        dest: /opt/monitoring/alertmanager/alertmanager.yml
+
+    - name: Prometheus Alert Rules 복사
+      copy:
+        src: ../../docker/monitoring/alertmanager/alert_rules.yml
+        dest: /opt/monitoring/alertmanager/alert_rules.yml
