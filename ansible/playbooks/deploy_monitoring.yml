@@ -66,6 +66,12 @@
     - name: Ensure Docker is installed
       include_role:
         name: common
+
+    - name: 모니터링 디렉토리 구성
+      file:
+        path: /opt/monitoring
+        state: directory
+        recurse: yes
     
     - name: docker-compose.yml 배포
       copy:
@@ -75,12 +81,6 @@
     - name: Docker Compose로 스택 실행
       shell: |
         cd /opt/monitoring && docker-compose up -d
-
-    - name: 모니터링 디렉토리 구성
-      file:
-        path: /opt/monitoring
-        state: directory
-        recurse: yes
 
     - name: Prometheus 설정 파일 배포
       copy:
