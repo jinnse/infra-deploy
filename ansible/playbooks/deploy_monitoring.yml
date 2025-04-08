@@ -18,6 +18,7 @@
         src: /opt/node_exporter-1.7.0.linux-amd64/node_exporter
         dest: /usr/local/bin/node_exporter
         state: link
+        force: yes
 
     - name: systemd 서비스 등록
       copy:
