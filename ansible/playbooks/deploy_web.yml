@@ -43,7 +43,7 @@
       docker_image:
         build:
           path: "{{ app_dir }}/docker/web/"
-          name: "{{ docker_image_name }}"
+        name: "{{ docker_image_name }}"
         force: yes
 
     - name: Run the Flask application in Docker container
