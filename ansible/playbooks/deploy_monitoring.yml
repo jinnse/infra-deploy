@@ -114,6 +114,8 @@
       copy:
         src: ../../docker/monitoring/alertmanager.yml
         dest: /opt/monitoring/alertmanager.yml
+        force: yes
+        remote_src: no
 
     - name: Prometheus 알림 룰 복사
       copy:
