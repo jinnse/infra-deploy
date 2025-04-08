@@ -39,7 +39,7 @@
     - name: 로그 저장 디렉토리 생성
       file:
         path: "{{ brick_path }}/{{ item.name }}/logs"
-        state: directory
+        state: absent
         mode: '0777'
       loop: "{{ volumes }}"
       when: item.name in ['web', 'app', 'monitoring']

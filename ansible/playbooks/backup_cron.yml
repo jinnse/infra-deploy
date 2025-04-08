@@ -18,13 +18,13 @@
         path: "/db2"
         type: "data"
       - name: web
-        path: "/web/logs"
+        path: "/web"
         type: "logs"
       - name: app
-        path: "/app/logs"
+        path: "/app"
         type: "logs"
       - name: monitoring
-        path: "/monitoring/logs"
+        path: "/monitoring"
         type: "logs"
 
   tasks:
