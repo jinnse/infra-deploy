@@ -21,7 +21,7 @@ services:
 
 # 📌 db1은 Patroni가 붙은 PostgreSQL Primary 후보 노드입니다.
   db1:
-    image: registry.opensource.zalan.do/acid/patroni:2.1-p1
+    image: ghcr.io/zalando/spilo-15:3.1-p1
     container_name: db1
     volumes:
       - /mnt/shared/db1:/home/postgres/pgdata # 데이터 디렉토리
@@ -37,7 +37,7 @@ services:
 
 # 📌 db2는 Patroni가 붙은 PostgreSQL Replica입니다.
   db2:
-    image: registry.opensource.zalan.do/acid/patroni:2.1-p1
+    image: ghcr.io/zalando/spilo-15:3.1-p1
     container_name: db2
     volumes:
       - /mnt/shared/db2:/home/postgres/pgdata                  # db2의 별도 데이터 볼륨
