@@ -76,7 +76,7 @@
     - name: docker-compose.yml 배포
       copy:
         src: ../../docker/monitoring/docker-compose.yml
-        dest: /opt/monitoring/
+        dest: /opt/monitoring/docker-compose.yml
 
     - name: Docker Compose로 스택 실행
       shell: |
@@ -85,7 +85,7 @@
     - name: Prometheus 설정 파일 배포
       copy:
         src: ../../docker/monitoring/prometheus.yml
-        dest: /opt/monitoring/
+        dest: /opt/monitoring/prometheus.yml
 
     - name: Grafana 디렉토리 생성
       file:
@@ -98,17 +98,17 @@
     - name: Grafana datasource 설정 복사
       copy:
         src: ../../docker/monitoring/grafana/datasources.yml
-        dest: /opt/monitoring/grafana/provisioning/datasources/
+        dest: /opt/monitoring/grafana/provisioning/datasources/datasources.yml
 
     - name: Grafana dashboard 설정 복사
       copy:
         src: ../../docker/monitoring/grafana/dashboards.yml
-        dest: /opt/monitoring/grafana/provisioning/dashboards/
+        dest: /opt/monitoring/grafana/provisioning/dashboards/dashboards.yml
 
     - name: Grafana node_exporter dashboard 복사
       copy:
         src: ../../docker/monitoring/grafana/node_exporter_dashboard.json
-        dest: /opt/monitoring/grafana/dashboards/
+        dest: /opt/monitoring/grafana/dashboards/node_exporter_dashboard.json
 
     - name: Alertmanager 디렉토리 생성
       file:
@@ -118,9 +118,9 @@
     - name: Alertmanager 설정 파일 복사
       copy:
         src: ../../docker/monitoring/alertmanager/alertmanager.yml
-        dest: /opt/monitoring/alertmanager/
+        dest: /opt/monitoring/alertmanager/alertmanager.yml
 
     - name: Prometheus Alert Rules 복사
       copy:
         src: ../../docker/monitoring/alertmanager/alert_rules.yml
-        dest: /opt/monitoring/alertmanager/
+        dest: /opt/monitoring/alertmanager/alert_rules.yml
