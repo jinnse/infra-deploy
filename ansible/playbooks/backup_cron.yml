@@ -1,0 +1,123 @@
+---
+- name: Setup backup cron job on storage servers
+  hosts: storage
+  become: true
+  vars_files:
+    - ../secrets/aws_creds.yml.vault
+  vars:
+    backup_target: "/gluster/backup" #임시 지정 tar 가 저장될 공간간
+    s3_bucket: "aws9-team1"
+    aws_region: "ap-northeast-2"
+    backup_script_path: "/home/user1/bin/backup_logs.sh" #백업 수행하는 쉘 스크립트 저장 위치, cron 실행될 파일 경로
+    cron_time: "0 0 * * *"  # 매일 자정
+    volumes:
+      - name: db1
+        path: "/db1"
+        type: "data"
+      - name: db2
+        path: "/db2"
+        type: "data"
+      - name: web
+        path: "/web/logs"
+        type: "logs"
+      - name: app
+        path: "/app/logs"
+        type: "logs"
+      - name: monitoring
+        path: "/monitoring/logs"
+        type: "logs"
+
+  tasks:
+    - name: Print AWS key
+      debug:
+        msg: "{{ aws_access_key }}"
+    - name: Install required packages
+      apt:
+        name: awscli
+        state: present
+        update_cache: yes
+
+# aws cli 자격 증명 파일을 저장하는 기본 위치 없으면s aws s3 cp 같은 명령어가 인증 정보를 못 찾아서 s3 업로드 실패
+    - name: Create .aws directory for user1
+      file:
+        path: /home/user1/.aws
+        state: directory
+        mode: '0700'
+        owner: user1
+        group: user1
+
+#압축된 백업 파일 tar 가 임시로 저장되는 위치 없으면 tar 파일을 저장할 수 없다
+    - name: Create backup target directory
+      file:
+        path: "{{ backup_target }}"
+        state: directory
+        mode: '0755'
+        owner: user1
+        group: user1
+
+#백업 스크립트가 저장되는 디렉토리 user1이 매일 이 경로의 스크립트로 cron 진행 함함
+    - name: Create bin director for user1
+      file:
+        path: /home/user1/bin
+        state: directory
+        mode: '0755'
+        owner: user1
+        group: user1
+
+
+# aws 자격 증명 파일 설정 / s3 에 안전하게 접속하도록 사용자 전용 인증 요청청
+    - name: Configure AWS CLI credentials
+      copy: #copy 모듈 원격 서버에 파일을 만들어서 넣는 기능
+        dest: "/home/user1/.aws/credentials" # 파일이 생성될 위치 , aws key가 들어갈 기본 경로 
+        content: | # 파일에 들어갈 내용 작성
+          [default] 
+          aws_access_key_id={{ aws_access_key }}
+          aws_secret_access_key={{ aws_secret_key }}
+        mode: '0600'
+        owner: user1
+        group: user1
+
+#aws cli 기본 설정 aws s3 cp 같이 region 명시 안 하는 명령어에서 리전 설정이 없으면 오류 뜰 수 있다
+    - name: Configure AWS CLI config
+      copy:
+        dest: "/home/user1/.aws/config" #aws  기본 경로
+        content: |
+          [default]
+          region={{ aws_region }}
+          output=json
+        mode: '0600'
+        owner: user1
+        group: user1
+
+#s3 에 업로드 하는 백업 스크립트 생성\
+    - name: Create backup scripts per volume
+      copy:
+        dest: "/home/user1/bin/backup_{{ vol.name }}.sh"
+        mode: '0755'
+        owner: user1
+        group: user1
+        content: |
+          #!/bin/bash
+          TIMESTAMP=$(date +\%Y-\%m-\%d)
+          BACKUP_NAME="{{ vol.name }}_{{ vol.type }}_$TIMESTAMP.tar.gz"
+          mkdir -p {{ backup_target }}
+          tar -czf {{ backup_target }}/$BACKUP_NAME {{ vol.path }}
+          AWS_ACCESS_KEY_ID={{ aws_access_key }} AWS_SECRET_ACCESS_KEY={{ aws_secret_key }} \
+          aws s3 cp {{ backup_target }}/$BACKUP_NAME s3://{{ s3_bucket }}/{{ vol.name }}/$BACKUP_NAME --region {{ aws_region }}
+          find {{ backup_target }} -name "{{ vol.name }}*.tar.gz" -mtime +7 -exec rm -f {} \;
+      loop: "{{ volumes }}"
+      loop_control:
+        loop_var: vol
+        #마지막 줄은 7일 이상된 백업 자동 삭제 명령어
+
+# s3로 백업을 하는 작업
+    - name: Add cron job for daily backup
+      cron:
+        name: "Backup cron for {{ vol.name }}"
+        minute: "0"
+        hour: "0"
+        job: "/home/user1/bin/backup_{{ vol.name }}.sh"
+        user: user1
+      loop: "{{ volumes }}"
+      loop_control:
+        loop_var: vol" #cron 이 실제로 실행할 명령어 지정
