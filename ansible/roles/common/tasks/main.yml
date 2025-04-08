@@ -7,7 +7,7 @@
       - apt-transport-https # HTTPS 지원
       - ca-certificates # 인증서 관리
       - curl # curl 설치
-      - software-propertes-common # 소프트웨어 속성 관리
+      - software-properties-common # 소프트웨어 속성 관리
     state: present
     update_cache: yes
 
