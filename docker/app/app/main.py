@@ -18,7 +18,14 @@ logging.basicConfig(
 
 @app.route('/')
 def index():
-    return jsonify({"message": "Flask app is running!"})
+    return '''
+    <html>
+    <head><title>Flask App</title></head>
+    <body>
+        <h1>Hello from Flask App!</h1>
+    </body>
+    </html>
+    '''
 
 @app.route('/weather')
 def weather_data():
