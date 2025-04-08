@@ -11,7 +11,7 @@ route:
 receivers:
   - name: 'default'
     email_configs:
-      - to: 'you@example.com'
+      - to: 'alex941@naver.com'
         from: 'alert@example.com'
         smarthost: 'smtp.example.com:587'
         auth_username: 'alert@example.com'
