@@ -111,3 +111,4 @@
     - name: Docker Compose로 스택 실행
       shell: |
         cd /opt/monitoring && docker-compose up -d
+      become: true
