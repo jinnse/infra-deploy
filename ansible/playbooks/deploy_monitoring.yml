@@ -73,6 +73,14 @@
         state: directory
         recurse: yes
 
+    - name: 인벤토리에서 Prometheus 타겟 생성
+      set_fact:
+        prometheus_targets: >-
+          {{
+            groups['all'] + ['localhost'] | difference(groups['monitoring']) | map('extract', hostvars, ['ansible_host']) |
+            map('regex_replace', '(.*)', '\\1:9100') | list
+          }}
+
     - name: Prometheus 설정 파일 배포 
       copy:
         dest: /opt/monitoring/prometheus.yml
