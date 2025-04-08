@@ -11,10 +11,10 @@
       - db2.yml
 
   tasks:
-    # 1. Docker 설치
+    # 1. Docker 설치 roles/docker/tasks/main.yml의 작업을 실행해줘
     - name: Ensure Docker is installed
       include_role:
-        name: docker
+        name: common
 
     # 2. 디렉토리 생성 (root, subdirs)
     - name: Create DB project root directory
