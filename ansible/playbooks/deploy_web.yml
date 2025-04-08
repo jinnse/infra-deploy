@@ -11,6 +11,11 @@
     api_key: "{{ lookup('env', 'API_KEY') }}"
   
   tasks:
+    # Docker 설치
+    - name: Ensure Docker is installed
+      include_role:
+        name: docker
+
     - name: Install required packages (Python, Docker, Git)
       apt:
         name:
