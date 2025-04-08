@@ -3,11 +3,12 @@ version: '3'
 services:
   prometheus:
     image: prom/prometheus
-    volumes:
-      - ./:/etc/prometheus/
-      - ./alertmanager/:/etc/prometheus/
+    container_name: monitoring-prometheus
     ports:
       - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./rules:/etc/prometheus/rules
 
   grafana:
     image: grafana/grafana
