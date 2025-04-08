@@ -1,263 +1,102 @@
----
-- name: Deploy Advanced Monitoring Stack
-  hosts: all
+- name: Node Exporter 설치
+  hosts: all:!monitoring
+  become: true
+  tasks:
+    - name: Node Exporter 바이너리 다운로드
+      get_url:
+        url: https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz
+        dest: /tmp/node_exporter.tar.gz
+
+    - name: 압축 해제 및 바이너리 이동
+      unarchive:
+        src: /tmp/node_exporter.tar.gz
+        dest: /opt/
+        remote_src: yes
+
+    - name: 심볼릭 링크 생성
+      file:
+        src: /opt/node_exporter-1.7.0.linux-amd64/node_exporter
+        dest: /usr/local/bin/node_exporter
+        state: link
+
+    - name: systemd 서비스 등록
+      copy:
+        dest: /etc/systemd/system/node_exporter.service
+        content: |
+          [Unit]
+          Description=Node Exporter
+          After=network.target
+
+          [Service]
+          ExecStart=/usr/local/bin/node_exporter
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: 서비스 시작 및 활성화
+      systemd:
+        name: node_exporter
+        enabled: yes
+        state: started
+
+- name: Docker 기반 모니터링 스택 설치 (Prometheus, Grafana, Alertmanager)
+  hosts: monitoring
   become: true
   vars:
-    prometheus_version: "2.43.0"
-    node_exporter_version: "1.5.0"
-    grafana_version: "9.5.2"
-    alertmanager_version: "0.25.0"
-    grafana_admin_password: "test123"
-    monitoring_ports: [9090, 9100, 3000, 9093]
-
-  handlers:
-    - name: restart prometheus
-      systemd:
-        name: prometheus
-        state: restarted
-
-    - name: restart alertmanager
-      systemd:
-        name: alertmanager
-        state: restarted
-
-    - name: restart grafana
-      systemd:
-        name: grafana-server
-        state: restarted
-
+    prometheus_targets:
+      - web:9100
+      - app:9100
+      - db:9100
+      - storage1:9100
+      - storage2:9100
+      - control:9100
   tasks:
-    # 사용자 및 권한 설정
-    - name: Create monitoring user
-      user:
-        name: user1
-        system: yes
-        shell: /usr/sbin/nologin
-        create_home: no
-
-    # 공통 디렉토리 구조 생성
-    - name: Create standard directories
-      file:
-        path: "{{ item }}"
-        state: directory
-        owner: user1
-        group: user1
-      loop:
-        - /etc/prometheus
-        - /var/lib/prometheus
-        - /etc/alertmanager
-        - /var/lib/alertmanager
-
-    # 의존성 설치
-    - name: Install base dependencies
+    - name: Docker & Docker Compose 설치
       apt:
-        name: ["tar", "net-tools", "software-properties-common"]
+        name: [docker.io, docker-compose]
+        state: present
         update_cache: yes
-        cache_valid_time: 3600
 
-    # Node Exporter 설치
-    - name: Deploy Node Exporter
-      block:
-        - name: Download Node Exporter
-          get_url:
-            url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
-            dest: /tmp/node_exporter.tar.gz
+    - name: 모니터링 디렉토리 구성
+      file:
+        path: /opt/monitoring
+        state: directory
+        recurse: yes
 
-        - name: Extract and install
-          unarchive:
-            src: /tmp/node_exporter.tar.gz
-            dest: /usr/local/bin/
-            remote_src: yes
-            extra_opts: ["--strip-components=1"]
-            owner: user1
-            group: user1
-            mode: '0755'
+    - name: Prometheus 설정 파일 배포
+      copy:
+        dest: /opt/monitoring/prometheus.yml
+        content: |
+          global:
+            scrape_interval: 15s
+          scrape_configs:
+            - job_name: 'node_exporters'
+              static_configs:
+                - targets:
+                    {{ prometheus_targets | to_nice_yaml(indent=6) }}
 
-        - name: Configure systemd service
-          copy:
-            dest: /etc/systemd/system/node_exporter.service
-            content: |
-              [Unit]
-              Description=Node Exporter
-              After=network.target
+    - name: docker-compose.yml 배포
+      copy:
+        dest: /opt/monitoring/docker-compose.yml
+        content: |
+          version: '3'
+          services:
+            prometheus:
+              image: prom/prometheus
+              volumes:
+                - ./prometheus.yml:/etc/prometheus/prometheus.yml
+              ports:
+                - "9090:9090"
+            grafana:
+              image: grafana/grafana
+              ports:
+                - "3000:3000"
+            alertmanager:
+              image: prom/alertmanager
+              ports:
+                - "9093:9093"
 
-              [Service]
-              User=user1
-              ExecStart=/usr/local/bin/node_exporter
-              Restart=always
-
-              [Install]
-              WantedBy=multi-user.target
-
-        - name: Enable service
-          systemd:
-            name: node_exporter
-            enabled: yes
-            state: started
-      tags: node_exporter
-
-    # Prometheus 설치
-    - name: Deploy Prometheus
-      block:
-        - name: Download Prometheus
-          get_url:
-            url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
-            dest: /tmp/prometheus.tar.gz
-
-        - name: Extract and install
-          unarchive:
-            src: /tmp/prometheus.tar.gz
-            dest: /usr/local/bin/
-            remote_src: yes
-            extra_opts: ["--strip-components=1"]
-            owner: user1
-            group: user1
-            mode: '0755'
-
-        - name: Generate dynamic targets
-          set_fact:
-            prometheus_targets: "{% for host in groups['all'] %}'{{ hostvars[host].ansible_host }}:9100'{% if not loop.last %},{% endif %}{% endfor %}"
-
-        - name: Configure Prometheus
-          copy:
-            dest: /etc/prometheus/prometheus.yml
-            content: |
-              global:
-                scrape_interval: 15s
-
-              scrape_configs:
-                - job_name: 'nodes'
-                  static_configs:
-                    - targets: [{{ prometheus_targets }}]
-            owner: user1
-            group: user1
-            notify: restart prometheus
-
-        - name: Configure systemd service
-          copy:
-            dest: /etc/systemd/system/prometheus.service
-            content: |
-              [Unit]
-              Description=Prometheus Server
-              After=network.target
-
-              [Service]
-              User=user1
-              ExecStart=/usr/local/bin/prometheus \
-                --config.file=/etc/prometheus/prometheus.yml \
-                --storage.tsdb.path=/var/lib/prometheus
-              Restart=always
-
-              [Install]
-              WantedBy=multi-user.target
-
-        - name: Enable service
-          systemd:
-            name: prometheus
-            enabled: yes
-            state: started
-      tags: prometheus
-
-    # Alertmanager 설치
-    - name: Deploy Alertmanager
-      block:
-        - name: Download Alertmanager
-          get_url:
-            url: "https://github.com/prometheus/alertmanager/releases/download/v{{ alertmanager_version }}/alertmanager-{{ alertmanager_version }}.linux-amd64.tar.gz"
-            dest: /tmp/alertmanager.tar.gz
-
-        - name: Extract and install
-          unarchive:
-            src: /tmp/alertmanager.tar.gz
-            dest: /usr/local/bin/
-            remote_src: yes
-            extra_opts: ["--strip-components=1"]
-            owner: user1
-            group: user1
-            mode: '0755'
-
-        - name: Configure Alertmanager
-          copy:
-            dest: /etc/alertmanager/alertmanager.yml
-            content: |
-              route:
-                receiver: 'default'
-              receivers:
-                - name: 'default'
-                  email_configs:
-                    - to: 'alex941song@gmail.com'
-            owner: user1
-            group: user1
-            notify: restart alertmanager
-
-        - name: Configure systemd service
-          copy:
-            dest: /etc/systemd/system/alertmanager.service
-            content: |
-              [Unit]
-              Description=Alertmanager
-              After=network.target prometheus.service
-
-              [Service]
-              User=user1
-              ExecStart=/usr/local/bin/alertmanager \
-                --config.file=/etc/alertmanager/alertmanager.yml \
-                --storage.path=/var/lib/alertmanager
-              Restart=always
-
-              [Install]
-              WantedBy=multi-user.target
-
-        - name: Enable service
-          systemd:
-            name: alertmanager
-            enabled: yes
-            state: started
-      tags: alertmanager
-
-    # Grafana 설치
-    - name: Deploy Grafana
-      block:
-        - name: Add Grafana repository
-          apt_repository:
-            repo: "deb https://packages.grafana.com/oss/deb stable main"
-            state: present
-            update_cache: yes
-
-        - name: Install Grafana
-          apt:
-            name: "grafana={{ grafana_version }}"
-            state: present
-
-        - name: Configure Grafana security
-          ini_file:
-            path: /etc/grafana/grafana.ini
-            section: security
-            option: admin_password
-            value: "{{ grafana_admin_password }}"
-            backup: yes
-            mode: 0640
-            notify: restart grafana
-
-        - name: Enable service
-          systemd:
-            name: grafana-server
-            enabled: yes
-            state: started
-      tags: grafana
-
-    # # 방화벽 설정
-    # - name: Configure firewall
-    #   ufw:
-    #     rule: allow
-    #     port: "{{ item }}"
-    #     proto: tcp
-    #   loop: "{{ monitoring_ports }}"
-    #   when: ansible_os_family == 'Debian'
-
-    # # Netdata 설치 (옵션)
-    # - name: Install Netdata
-    #   include_role:
-    #     name: geerlingguy.netdata
-    #   when: ansible_distribution == "Ubuntu"
-    #   tags: netdata
+    - name: Docker Compose로 스택 실행
+      shell: |
+        cd /opt/monitoring && docker-compose up -d
