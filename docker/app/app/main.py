@@ -39,3 +39,7 @@ def weather_data():
     except Exception as e:
         logging.error("DB 연결 실패:\n" + traceback.format_exc())
         return jsonify({"error": "DB 연결 실패"}), 500
+    
+# ✅ 서버 실행 코드 추가
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000)
