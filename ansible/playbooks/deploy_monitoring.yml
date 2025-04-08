@@ -12,18 +12,6 @@
         src: /tmp/node_exporter.tar.gz
         dest: /opt/
         remote_src: yes
-      become: true
-
-    - name: 기존 node_exporter 바이너리 제거 (파일일 경우)
-      file:
-        path: /usr/local/bin/node_exporter
-        state: absent
-      when: >
-        ansible_facts['user_id'] is defined and
-        ansible_facts['user_id'] != 'root'
-
-      ignore_errors: true
-      become: true
 
     - name: 심볼릭 링크 생성
       file:
@@ -31,8 +19,6 @@
         dest: /usr/local/bin/node_exporter
         state: link
         force: yes
-      become: true
-
 
     - name: systemd 서비스 등록
       copy:
