@@ -109,3 +109,18 @@
       copy:
         src: ../../docker/monitoring/grafana/node_exporter_dashboard.json
         dest: /opt/monitoring/grafana/dashboards/node_exporter_dashboard.json
+
+    - name: Alertmanager 디렉토리 생성
+      file:
+        path: /opt/monitoring/alertmanager
+        state: directory
+
+    - name: Alertmanager 설정 파일 복사
+      copy:
+        src: ../../docker/monitoring/alertmanager/alertmanager.yml
+        dest: /opt/monitoring/alertmanager/alertmanager.yml
+
+    - name: Prometheus Alert Rules 복사
+      copy:
+        src: ../../docker/monitoring/alertmanager/alert_rules.yml
+        dest: /opt/monitoring/alertmanager/alert_rules.yml
