@@ -120,4 +120,4 @@
         user: user1
       loop: "{{ volumes }}"
       loop_control:
-        loop_var: vol" #cron 이 실제로 실행할 명령어 지정
+        loop_var: vol #cron 이 실제로 실행할 명령어 지정
