@@ -8,7 +8,7 @@
     docker_image_name: "weather-app"
     docker_container_name: "weather-app-container"
     port: 5000
-    env_file: "/home/user1/{{ app_name }}/.env"
+    api_key: "{{ lookup('env', 'API_KEY') }}"
   
   tasks:
     - name: Install required packages (Python, Docker, Git)
@@ -28,11 +28,11 @@
         version: main
         force: yes
 
-    - name: Copy the .env file to the server
-      copy:
-        src: .env
-        dest: "{{ env_file }}"
-        mode: '0600'
+    - name: Set environment variables from Jenkins credentials
+      block:
+        - name: Set environment variable from Jenkins API Key
+          set_fact:
+            flask_api_key: "{{ api_key }}"
 
     - name: Install required Python packages from requirements.txt
       pip:
