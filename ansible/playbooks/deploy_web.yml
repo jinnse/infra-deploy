@@ -49,7 +49,7 @@
         mode: '0644'
 
     - name: Stop and remove existing containers
-      shell: docker compose down || true
+      shell: docker compose down --remove-orphans || true
       args:
         chdir: "{{ deploy_root }}"
 
