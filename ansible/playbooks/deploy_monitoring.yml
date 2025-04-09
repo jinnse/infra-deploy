@@ -147,24 +147,24 @@
 
     - name: unmount glusterfs
       shell: |
-        umount -l shared/mnt/logs/monitoring
+        umount -l /shared/mnt/logs/monitoring
       ignore_errors: true
 
     - name: Remove mount dir monitoring logs
       file:
-        path: shared/mnt/logs/monitoring
+        path: /shared/mnt/logs/monitoring
         state: absent
       ignore_errors: true
 
     - name: Create mount dir monitoring logs
       file:
-        path: shared/mnt/logs/monitoring
+        path: /shared/mnt/logs/monitoring
         state: directory
         mode: '0777'
 
     - name: GlusterFS mount monitoring logs
       mount:
-        path: "shared/mnt/logs/monitoring"
+        path: "/shared/mnt/logs/monitoring"
         src: "172.16.1.40:monitoring"
         fstype: glusterfs
         opts: defaults,_netdev
