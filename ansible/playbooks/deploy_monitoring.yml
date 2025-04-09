@@ -169,3 +169,11 @@
         fstype: glusterfs
         opts: defaults,_netdev
         state: mounted
+
+    - name: Change ownership of Prometheus log directory to 'nobody'
+      file:
+        path: /shared/mnt/logs/monitoring
+        state: directory
+        owner: 65534
+        group: 65534
+        recurse: yes
