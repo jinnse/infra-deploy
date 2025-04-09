@@ -116,7 +116,7 @@
 
           echo "[INFO] $(date) - Backup started for {{ vol.name }}"
 
-          TIMESTAMP=$(date +\%Y-\%m-\%d_\%H-\%M)
+          TIMESTAMP=$(date +\%Y-\%m-\%d)
           BACKUP_NAME="{{ vol.name }}_{{ vol.type }}_$TIMESTAMP.tar.gz"
 
           mkdir -p {{ backup_target }}
