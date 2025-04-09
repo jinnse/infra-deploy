@@ -55,21 +55,8 @@
   hosts: monitoring
   become: true
   vars:
-    prometheus_targets:
-      - name: web
-        ip: 172.16.1.20:9100
-      - name: app
-        ip: 172.16.1.70:9100
-      - name: db
-        ip: 172.16.1.30:9100
-      - name: storage1
-        ip: 172.16.1.40:9100
-      - name: storage2
-        ip: 172.16.1.50:9100
-      - name: control
-        ip: 172.16.1.10:9100
-      - name: monitoring
-        ip: 172.16.1.60:9100
+    local_project_root: ../../infra-components/monitoring
+    monitoring_base_dir: /opt/monitoring
         
   tasks:
     - name: Ensure Docker is installed
@@ -78,68 +65,68 @@
 
     - name: 모니터링 디렉토리 구성
       file:
-        path: /opt/monitoring
+        path: "{{ monitoring_base_dir }}"
         state: directory
         recurse: yes
     
     - name: docker-compose.yml 배포
       copy:
-        src: ../../docker/monitoring/docker-compose.yml
-        dest: /opt/monitoring/docker-compose.yml
+        src: "{{ local_project_root }}/docker-compose.yml"
+        dest: "{{ monitoring_base_dir }}/docker-compose.yml"
 
     - name: Docker Compose로 스택 실행
       shell: |
-        cd /opt/monitoring && docker-compose up -d
+        cd {{ monitoring_base_dir }} && docker-compose up -d
 
     - name: Prometheus 설정 파일 배포
       copy:
-        src: ../../docker/monitoring/prometheus.yml
-        dest: /opt/monitoring/prometheus.yml
+        src: "{{ local_project_root }}/prometheus.yml"
+        dest: "{{ monitoring_base_dir }}/prometheus.yml"
 
     - name: Grafana 디렉토리 생성
       file:
         path: "{{ item }}"
         state: directory
       loop:
-        - /opt/monitoring/grafana/provisioning/datasources
-        - /opt/monitoring/grafana/provisioning/dashboards
+        - "{{ monitoring_base_dir }}/grafana/provisioning/datasources"
+        - "{{ monitoring_base_dir }}/grafana/provisioning/dashboards"
 
     - name: Grafana datasource 설정 복사
       copy:
-        src: ../../docker/monitoring/grafana/datasources.yml
-        dest: /opt/monitoring/grafana/provisioning/datasources/datasources.yml
+        src: "{{ local_project_root }}/grafana/datasources.yml"
+        dest: "{{ monitoring_base_dir }}/grafana/provisioning/datasources/datasources.yml"
 
     - name: Grafana dashboard 설정 복사
       copy:
-        src: ../../docker/monitoring/grafana/dashboards.yml
-        dest: /opt/monitoring/grafana/provisioning/dashboards/dashboards.yml
+        src: "{{ local_project_root }}/grafana/dashboards.yml"
+        dest: "{{ monitoring_base_dir }}/grafana/provisioning/dashboards/dashboards.yml"
 
     - name: Grafana node_exporter dashboard 복사
       copy:
-        src: ../../docker/monitoring/grafana/node_exporter_dashboard.json
-        dest: /opt/monitoring/grafana/dashboards/node_exporter_dashboard.json
+        src: "{{ local_project_root }}/grafana/node_exporter_dashboard.json"
+        dest: "{{ monitoring_base_dir }}/grafana/dashboards/node_exporter_dashboard.json"
 
     - name: Alertmanager 디렉토리 생성
       file:
-        path: /opt/monitoring/alertmanager
+        path: "{{ monitoring_base_dir }}/alertmanager"
         state: directory
 
     - name: rules 디렉토리 생성
       file:
-        path: /opt/monitoring/rules
+        path: "{{ monitoring_base_dir }}/rules"
         state: directory
 
     - name: Alertmanager 설정 파일 복사
       copy:
-        src: ../../docker/monitoring/alertmanager/alertmanager.yml
-        dest: /opt/monitoring/alertmanager/alertmanager.yml
+        src: "{{ local_project_root }}/alertmanager/alertmanager.yml"
+        dest: "{{ monitoring_base_dir }}/alertmanager/alertmanager.yml"
 
     - name: Prometheus Alert Rules 복사
       copy:
-        src: ../../docker/monitoring/rules/alert_rules.yml
-        dest: /opt/monitoring/rules/alert_rules.yml
+        src: "{{ local_project_root }}/rules/alert_rules.yml"
+        dest: "{{ monitoring_base_dir }}/rules/alert_rules.yml"
 
-    # 7. GlusterFS 설치 및 마운트
+    # GlusterFS 설치 및 마운트
     - name: install glusterfs
       apt:
         name: glusterfs-client

@@ -4,8 +4,8 @@
   become: true
 
   vars:
-    deploy_root: /home/user1/docker/db_deploy               # 원격 서버에 생성할 디렉토리
-    local_project_root: ../../docker/db                    # 로컬에서 복사할 파일 기준 경로
+    deploy_root: /home/user1/db_deploy               # 원격 서버에 생성할 디렉토리
+    local_project_root: ../../infra-components/db                    # 로컬에서 복사할 파일 기준 경로
     patroni_files:
       - db1.yml
       - db2.yml

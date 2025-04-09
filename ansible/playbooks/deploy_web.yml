@@ -4,8 +4,8 @@
   become: true
 
   vars:
-    deploy_root: /home/user1/docker/web_deploy
-    local_project_root: ../../docker/web
+    deploy_root: /home/user1/web_deploy
+    local_project_root: ../../infra-components/web
     config_files:
       - docker-compose.yml
     nginx_dir: nginx

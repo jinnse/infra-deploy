@@ -4,8 +4,8 @@
   become: true
 
   vars:
-    deploy_root: /home/user1/docker/app_deploy  # 원격 서버에 생성할 디렉토리
-    local_project_root: ../../docker/app
+    deploy_root: /home/user1/app_deploy  # 원격 서버에 생성할 디렉토리
+    local_project_root: ../../infra-components/app
     flask_app_files:
       - Dockerfile
       - docker-compose.yml
