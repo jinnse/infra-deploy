@@ -56,12 +56,21 @@
   become: true
   vars:
     prometheus_targets:
-      - web:9100
-      - app:9100
-      - db:9100
-      - storage1:9100
-      - storage2:9100
-      - control:9100
+      - name: web
+        ip: 172.16.1.20:9100
+      - name: app
+        ip: 172.16.1.70:9100
+      - name: db
+        ip: 172.16.1.30:9100
+      - name: storage1
+        ip: 172.16.1.40:9100
+      - name: storage2
+        ip: 172.16.1.50:9100
+      - name: control
+        ip: 172.16.1.10:9100
+      - name: monitoring
+        ip: 172.16.1.60:9100
+        
   tasks:
     - name: Ensure Docker is installed
       include_role:

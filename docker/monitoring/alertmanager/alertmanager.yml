@@ -12,8 +12,8 @@ receivers:
   - name: 'default'
     email_configs:
       - to: 'alex941@naver.com'
-        from: 'alert@example.com'
+        from: 'alex941song@gmail.com'
         smarthost: 'smtp.example.com:587'
-        auth_username: 'alert@example.com'
-        auth_password: 'yourpassword'
+        auth_username: 'alex941song@gmail.com'
+        auth_password: 'dvju ebtb rylk yzlm'
         require_tls: true
