@@ -3,15 +3,22 @@ version: '3'
 services:
   prometheus:
     image: prom/prometheus
-    container_name: monitoring-prometheus
+    container_name: prometheus
+    restart: unless-stopped
     ports:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./rules:/etc/prometheus/rules
+      - ./rules/alert_rules.yml:/etc/prometheus/rules/alert_rules.yml
+      - /shared/mnt/logs/monitoring:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
 
   grafana:
     image: grafana/grafana
+    container_name: grafana
+    restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
@@ -20,6 +27,8 @@ services:
 
   alertmanager:
     image: prom/alertmanager
+    container_name: alertmanager
+    restart: unless-stopped
     volumes:
       - ./alertmanager/:/etc/alertmanager/
     ports:

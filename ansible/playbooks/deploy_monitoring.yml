@@ -56,12 +56,21 @@
   become: true
   vars:
     prometheus_targets:
-      - web:9100
-      - app:9100
-      - db:9100
-      - storage1:9100
-      - storage2:9100
-      - control:9100
+      - name: web
+        ip: 172.16.1.20:9100
+      - name: app
+        ip: 172.16.1.70:9100
+      - name: db
+        ip: 172.16.1.30:9100
+      - name: storage1
+        ip: 172.16.1.40:9100
+      - name: storage2
+        ip: 172.16.1.50:9100
+      - name: control
+        ip: 172.16.1.10:9100
+      - name: monitoring
+        ip: 172.16.1.60:9100
+        
   tasks:
     - name: Ensure Docker is installed
       include_role:
@@ -115,6 +124,11 @@
         path: /opt/monitoring/alertmanager
         state: directory
 
+    - name: rules 디렉토리 생성
+      file:
+        path: /opt/monitoring/rules
+        state: directory
+
     - name: Alertmanager 설정 파일 복사
       copy:
         src: ../../docker/monitoring/alertmanager/alertmanager.yml
@@ -122,5 +136,44 @@
 
     - name: Prometheus Alert Rules 복사
       copy:
-        src: ../../docker/monitoring/alertmanager/alert_rules.yml
-        dest: /opt/monitoring/alertmanager/alert_rules.yml
+        src: ../../docker/monitoring/rules/alert_rules.yml
+        dest: /opt/monitoring/rules/alert_rules.yml
+
+    # 7. GlusterFS 설치 및 마운트
+    - name: install glusterfs
+      apt:
+        name: glusterfs-client
+        state: present
+
+    - name: unmount glusterfs
+      shell: |
+        umount -l /shared/mnt/logs/monitoring
+      ignore_errors: true
+
+    - name: Remove mount dir monitoring logs
+      file:
+        path: /shared/mnt/logs/monitoring
+        state: absent
+      ignore_errors: true
+
+    - name: Create mount dir monitoring logs
+      file:
+        path: /shared/mnt/logs/monitoring
+        state: directory
+        mode: '0777'
+
+    - name: GlusterFS mount monitoring logs
+      mount:
+        path: "/shared/mnt/logs/monitoring"
+        src: "172.16.1.40:monitoring"
+        fstype: glusterfs
+        opts: defaults,_netdev
+        state: mounted
+
+    - name: Change ownership of Prometheus log directory to 'nobody'
+      file:
+        path: /shared/mnt/logs/monitoring
+        state: directory
+        owner: 65534
+        group: 65534
+        recurse: yes
