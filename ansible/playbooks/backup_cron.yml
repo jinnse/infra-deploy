@@ -9,7 +9,7 @@
     s3_bucket: "aws9-team1"
     aws_region: "ap-northeast-2"
     backup_script_path: "/home/user1/bin/backup_logs.sh"
-    cron_time: "0 * * * *"
+    cron_time: "0 0 * * *"
     volumes:
       - name: db1
         path: "/gluster/brick1/db1"
@@ -142,7 +142,7 @@
       cron:
         name: "Backup cron for {{ vol.name }}"
         minute: "0"
-        hour: "*"
+        hour: "0"
         job: "/home/user1/bin/backup_{{ vol.name }}.sh"
         user: user1
       loop: "{{ volumes }}"
