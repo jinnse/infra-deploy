@@ -115,6 +115,11 @@
         path: /opt/monitoring/alertmanager
         state: directory
 
+    - name: rules 디렉토리 생성
+      file:
+        path: /opt/monitoring/rules
+        state: directory
+
     - name: Alertmanager 설정 파일 복사
       copy:
         src: ../../docker/monitoring/alertmanager/alertmanager.yml
@@ -122,5 +127,5 @@
 
     - name: Prometheus Alert Rules 복사
       copy:
-        src: ../../docker/monitoring/alertmanager/alert_rules.yml
-        dest: /opt/monitoring/alertmanager/alert_rules.yml
+        src: ../../docker/monitoring/rules/alert_rules.yml
+        dest: /opt/monitoring/rules/alert_rules.yml
