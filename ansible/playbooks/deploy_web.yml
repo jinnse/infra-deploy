@@ -45,6 +45,11 @@
         mode: '0644'
       loop: "{{ web_files }}"
 
+    - name: Stop and remove existing containers
+      shell: docker compose down --remove-orphans || true
+      args:
+        chdir: "{{ deploy_root }}"
+
     - name: Restart web cluster
       shell: docker compose down && docker compose up -d
       args:
