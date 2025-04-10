@@ -1,21 +1,18 @@
 ---
-- name: Deploy Web Front (Nginx)
+- name: Deploy Web Cluster with Proxy
   hosts: web
   become: true
 
   vars:
     deploy_root: /home/user1/web_deploy
-    local_project_root: ../../infra-components/web
-    config_files:
-      - docker-compose.yml
-    nginx_dir: nginx
+    local_root: ../../infra-components/web
 
   tasks:
     - name: Ensure Docker is installed
       include_role:
         name: common
 
-    - name: Create project root directory
+    - name: Create deployment directory
       file:
         path: "{{ deploy_root }}"
         state: directory
@@ -23,38 +20,28 @@
         group: user1
         mode: '0755'
 
-    - name: Create nginx config directory
+    - name: Copy files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ deploy_root }}/{{ item.dest }}"
+        mode: '0644'
+      with_items:
+        - { src: "{{ local_root }}/docker-compose.yml", dest: "docker-compose.yml" }
+        - { src: "{{ local_root }}/html/index.html", dest: "html/index.html" }
+        - { src: "{{ local_root }}/proxy/nginx.conf", dest: "proxy/nginx.conf" }
+
+    - name: Ensure subdirectories exist
       file:
-        path: "{{ deploy_root }}/{{ nginx_dir }}"
+        path: "{{ deploy_root }}/{{ item }}"
         state: directory
-        owner: user1
-        group: user1
         mode: '0755'
-
-    - name: Copy config files
-      copy:
-        src: "{{ local_project_root }}/{{ item }}"
-        dest: "{{ deploy_root }}/{{ item }}"
         owner: user1
         group: user1
-        mode: '0644'
-      loop: "{{ config_files }}"
+      loop:
+        - html
+        - proxy
 
-    - name: Copy nginx.conf
-      copy:
-        src: "{{ local_project_root }}/nginx/nginx.conf"
-        dest: "{{ deploy_root }}/nginx/nginx.conf"
-        owner: user1
-        group: user1
-        mode: '0644'
-
-    - name: Stop and remove existing containers
-      shell: docker compose down --remove-orphans || true
+    - name: Restart web cluster
+      shell: docker compose down && docker compose up -d
       args:
         chdir: "{{ deploy_root }}"
-
-    - name: Start nginx container
-      shell: docker compose up -d
-      args:
-        chdir: "{{ deploy_root }}"
-

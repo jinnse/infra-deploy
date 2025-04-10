@@ -1,17 +1,32 @@
 version: '3.8'
 
 services:
-  nginx:
+  proxy:
     image: nginx:1.25
-    container_name: web-nginx
+    container_name: web-proxy
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./proxy/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
       - "80:80"
     networks:
-      - web-app-net
-    restart: always
+      - web-net
+
+  web1:
+    image: nginx:1.25
+    container_name: web1
+    volumes:
+      - ./html:/usr/share/nginx/html:ro
+    networks:
+      - web-net
+
+  web2:
+    image: nginx:1.25
+    container_name: web2
+    volumes:
+      - ./html:/usr/share/nginx/html:ro
+    networks:
+      - web-net
 
 networks:
-  web-app-net:
+  web-net:
     driver: bridge
