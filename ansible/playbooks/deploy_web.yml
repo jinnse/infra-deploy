@@ -5,7 +5,14 @@
 
   vars:
     deploy_root: /home/user1/web_deploy
-    local_root: ../../infra-components/web
+    local_project_root: ../../infra-components/web
+    web_files:
+      - { src: "docker-compose.yml", dest: "docker-compose.yml" }
+      - { src: "html/index.html", dest: "html/index.html" }
+      - { src: "proxy/nginx.conf", dest: "proxy/nginx.conf" }
+    subdirectories:
+      - html
+      - proxy
 
   tasks:
     - name: Ensure Docker is installed
@@ -20,16 +27,6 @@
         group: user1
         mode: '0755'
 
-    - name: Copy files
-      copy:
-        src: "{{ item.src }}"
-        dest: "{{ deploy_root }}/{{ item.dest }}"
-        mode: '0644'
-      with_items:
-        - { src: "{{ local_root }}/docker-compose.yml", dest: "docker-compose.yml" }
-        - { src: "{{ local_root }}/html/index.html", dest: "html/index.html" }
-        - { src: "{{ local_root }}/proxy/nginx.conf", dest: "proxy/nginx.conf" }
-
     - name: Ensure subdirectories exist
       file:
         path: "{{ deploy_root }}/{{ item }}"
@@ -37,9 +34,16 @@
         mode: '0755'
         owner: user1
         group: user1
-      loop:
-        - html
-        - proxy
+      loop: "{{ subdirectories }}"
+
+    - name: Copy files
+      copy:
+        src: "{{ local_project_root }}/{{ item.src }}"
+        dest: "{{ deploy_root }}/{{ item.dest }}"
+        owner: user1
+        group: user1
+        mode: '0644'
+      loop: "{{ web_files }}"
 
     - name: Restart web cluster
       shell: docker compose down && docker compose up -d
